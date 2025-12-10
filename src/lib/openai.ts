@@ -20,10 +20,10 @@ function getOpenAIClient(): OpenAI {
 // Configuration
 // ============================================
 
-// Model configuration - defaults to gpt-5.1-mini, can be overridden via env
-// gpt-5.1-mini is optimized for speed and cost while maintaining high quality
-// Pricing: $0.25/1M input, $2/1M output (very cost-effective)
-const DEFAULT_MODEL = "gpt-5.1-mini";
+// Model configuration - defaults to gpt-5-nano, can be overridden via env
+// gpt-5-nano is optimized for speed and cost while maintaining high quality
+// Pricing: $0.25/1M input, $2/1M output (cost-effective)
+const DEFAULT_MODEL = "gpt-5-nano";
 const getModel = () => process.env.OPENAI_MODEL || DEFAULT_MODEL;
 
 // ============================================
@@ -287,7 +287,6 @@ export async function parseTravelQuery(query: string): Promise<ParsedTravelQuery
         { role: "user", content: query },
       ],
       response_format: { type: "json_object" },
-      temperature: 0.1, // Low temperature for more consistent parsing
     });
 
     const content = completion.choices[0].message.content;
@@ -362,7 +361,6 @@ Return valid JSON exactly like this:
         { role: "user", content: `Look up airport codes for: ${cities.join(", ")}` },
       ],
       response_format: { type: "json_object" },
-      temperature: 0,
     });
 
     const content = completion.choices[0].message.content;
@@ -415,7 +413,6 @@ Direct flights available: ${hasDirectFlights ? "Yes" : "No"}
 Provide a brief insight or suggestion for the user.`,
         },
       ],
-      temperature: 0.7,
       max_tokens: 150,
     });
 

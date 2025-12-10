@@ -11,7 +11,7 @@ Personal flight search application with AI-powered natural language queries, mul
 - **Auth**: Simple password with iron-session (single-user)
 - **UI**: shadcn/ui + Tailwind CSS v4 (Editorial Travel Magazine theme)
 - **Flight APIs**: Amadeus (production API)
-- **AI**: OpenAI gpt-4o-mini for NLP parsing
+- **AI**: OpenAI gpt-5-nano for NLP parsing
 - **Email**: Resend for notifications
 - **Telegram**: Bot notifications for price alerts
 - **Animations**: Framer Motion
@@ -126,7 +126,7 @@ Required:
 
 Optional:
 - `AMADEUS_ENV` - Set to "prod" or "production" for production API
-- `OPENAI_MODEL` - Override model (defaults to `gpt-4o-mini`)
+- `OPENAI_MODEL` - Override model (defaults to `gpt-5-nano`)
 - `RESEND_API_KEY` - Resend API key for email notifications
 - `RESEND_FROM_EMAIL` - Sender email (defaults to `notifications@resend.dev`)
 - `NOTIFICATION_EMAIL` - Email to receive price alerts

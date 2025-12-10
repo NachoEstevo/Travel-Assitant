@@ -50,7 +50,7 @@ Filter results by:
 | Authentication | iron-session (password-based) |
 | UI | shadcn/ui + Tailwind CSS v4 |
 | Flight Data | Amadeus API |
-| AI/NLP | OpenAI gpt-4o-mini |
+| AI/NLP | OpenAI gpt-5-nano |
 | Email | Resend |
 | Notifications | Telegram Bot |
 | Animations | Framer Motion |
@@ -120,8 +120,8 @@ OPENAI_API_KEY=your_openai_api_key
 ### Optional
 
 ```env
-# OpenAI model override (defaults to gpt-4o-mini)
-OPENAI_MODEL=gpt-4o-mini
+# OpenAI model override (defaults to gpt-5-nano)
+OPENAI_MODEL=gpt-5-nano
 
 # Email notifications via Resend
 RESEND_API_KEY=your_resend_api_key
@@ -153,7 +153,7 @@ TELEGRAM_CHAT_ID=your_telegram_chat_id
 4. Create a new secret key
 5. Copy the key (starts with `sk-`)
 
-> **Cost**: The app uses `gpt-4o-mini` which is very affordable (~$0.15 per 1M input tokens).
+> **Cost**: The app uses `gpt-5-nano` which is affordable ($0.25 per 1M input tokens, $2 per 1M output tokens).
 
 ### Resend (Email Notifications) - Optional
 
