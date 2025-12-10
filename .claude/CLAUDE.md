@@ -136,6 +136,7 @@ Optional:
 - `TELEGRAM_BOT_TOKEN` - Telegram bot token from @BotFather
 - `TELEGRAM_CHAT_ID` - Telegram chat ID to receive alerts
 - `AMADEUS_ENV` - Set to "prod" or "production" for production API (api.amadeus.com)
+- `SKYSCANNER_API_KEY` - Skyscanner API key for cheaper flight prices (apply at partners.skyscanner.net)
 
 ## Current Session Status (Dec 10, 2025)
 

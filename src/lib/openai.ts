@@ -20,9 +20,10 @@ function getOpenAIClient(): OpenAI {
 // Configuration
 // ============================================
 
-// Model configuration - defaults to gpt-4o-mini, can be overridden via env
-// gpt-4o-mini is optimized for speed and cost while maintaining good quality
-const DEFAULT_MODEL = "gpt-4o-mini";
+// Model configuration - defaults to gpt-5.1-mini, can be overridden via env
+// gpt-5.1-mini is optimized for speed and cost while maintaining high quality
+// Pricing: $0.25/1M input, $2/1M output (very cost-effective)
+const DEFAULT_MODEL = "gpt-5.1-mini";
 const getModel = () => process.env.OPENAI_MODEL || DEFAULT_MODEL;
 
 // ============================================

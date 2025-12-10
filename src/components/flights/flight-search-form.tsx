@@ -18,7 +18,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Plane,
   ArrowRightLeft,
   Calendar,
   Users,
@@ -26,8 +25,10 @@ import {
   Search,
   Loader2,
   Route,
+  Plane,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { AirportSearch } from "./airport-search";
 
 const structuredSearchSchema = z.object({
   origin: z.string().length(3, "Enter 3-letter airport code"),
@@ -222,45 +223,27 @@ export function FlightSearchForm({
 
               {/* Origin & Destination */}
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="origin">From</Label>
-                  <div className="relative">
-                    <Plane className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground rotate-[-45deg]" />
-                    <Input
-                      id="origin"
-                      {...form.register("origin")}
-                      placeholder="EZE"
-                      className="pl-10 uppercase font-mono text-lg tracking-wider"
-                      maxLength={3}
-                      disabled={isLoading}
-                    />
-                  </div>
-                  {form.formState.errors.origin && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.origin.message}
-                    </p>
-                  )}
-                </div>
+                <AirportSearch
+                  id="origin"
+                  label="From"
+                  value={form.watch("origin")}
+                  onChange={(code) => form.setValue("origin", code, { shouldValidate: true })}
+                  placeholder="Search city or airport..."
+                  disabled={isLoading}
+                  iconRotation="-45deg"
+                  error={form.formState.errors.origin?.message}
+                />
 
-                <div className="space-y-2">
-                  <Label htmlFor="destination">To</Label>
-                  <div className="relative">
-                    <Plane className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground rotate-45" />
-                    <Input
-                      id="destination"
-                      {...form.register("destination")}
-                      placeholder="NRT"
-                      className="pl-10 uppercase font-mono text-lg tracking-wider"
-                      maxLength={3}
-                      disabled={isLoading}
-                    />
-                  </div>
-                  {form.formState.errors.destination && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.destination.message}
-                    </p>
-                  )}
-                </div>
+                <AirportSearch
+                  id="destination"
+                  label="To"
+                  value={form.watch("destination")}
+                  onChange={(code) => form.setValue("destination", code, { shouldValidate: true })}
+                  placeholder="Search city or airport..."
+                  disabled={isLoading}
+                  iconRotation="45deg"
+                  error={form.formState.errors.destination?.message}
+                />
               </div>
 
               {/* Dates */}
