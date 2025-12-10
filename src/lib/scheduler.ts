@@ -253,3 +253,136 @@ export function isValidCron(cronExpr: string): boolean {
 
 // Re-export cron utilities for convenience
 export { CRON_PRESETS, describeCronSchedule } from "./cron-utils";
+
+/**
+ * Check price alerts and trigger notifications if conditions are met
+ */
+export interface AlertCheckResult {
+  alertId: string;
+  success: boolean;
+  triggered: boolean;
+  currentPrice?: number;
+  targetPrice?: number;
+  error?: string;
+}
+
+export async function checkPriceAlerts(): Promise<AlertCheckResult[]> {
+  // Get all active alerts that haven't expired
+  const alerts = await prisma.priceAlert.findMany({
+    where: {
+      active: true,
+      triggered: false,
+      expiresAt: {
+        gt: new Date(),
+      },
+    },
+  });
+
+  const results: AlertCheckResult[] = [];
+
+  for (const alert of alerts) {
+    try {
+      // Search for flights on this route
+      const result = await searchFlights({
+        originLocationCode: alert.origin,
+        destinationLocationCode: alert.destination,
+        departureDate: alert.departureDate.toISOString().split("T")[0],
+        returnDate: alert.returnDate?.toISOString().split("T")[0],
+        adults: 1,
+        travelClass: "ECONOMY",
+        max: 1, // We only need the cheapest
+      });
+
+      if (result.flights.length === 0) {
+        results.push({
+          alertId: alert.id,
+          success: true,
+          triggered: false,
+          error: "No flights found",
+        });
+        continue;
+      }
+
+      const cheapestPrice = result.flights[0].price;
+
+      // Update current price
+      await prisma.priceAlert.update({
+        where: { id: alert.id },
+        data: { currentPrice: cheapestPrice },
+      });
+
+      // Check if price dropped below target
+      if (cheapestPrice <= alert.targetPrice) {
+        // Trigger the alert
+        await prisma.priceAlert.update({
+          where: { id: alert.id },
+          data: {
+            triggered: true,
+            notifiedAt: new Date(),
+          },
+        });
+
+        // Send notification (reuse notification system)
+        try {
+          const { sendEmailNotification, sendTelegramNotification } = await import("./notifications");
+
+          const message = `Price Alert Triggered!\n\n${alert.origin} → ${alert.destination}\nTarget: $${alert.targetPrice}\nCurrent: $${Math.round(cheapestPrice)}\n\nDeparture: ${alert.departureDate.toLocaleDateString()}`;
+
+          await Promise.all([
+            sendEmailNotification({
+              subject: `Price Drop: ${alert.origin} → ${alert.destination} now $${Math.round(cheapestPrice)}`,
+              text: message,
+              html: `<h2>Price Alert Triggered!</h2>
+                <p><strong>${alert.origin} → ${alert.destination}</strong></p>
+                <p>Target Price: $${alert.targetPrice}</p>
+                <p>Current Price: <strong>$${Math.round(cheapestPrice)}</strong></p>
+                <p>Departure: ${alert.departureDate.toLocaleDateString()}</p>
+                <p><a href="https://www.google.com/travel/flights?q=flights%20from%20${alert.origin}%20to%20${alert.destination}%20on%20${alert.departureDate.toISOString().split("T")[0]}">Search on Google Flights</a></p>`,
+            }),
+            sendTelegramNotification(message),
+          ]);
+        } catch (notifyError) {
+          console.error("Failed to send alert notification:", notifyError);
+        }
+
+        results.push({
+          alertId: alert.id,
+          success: true,
+          triggered: true,
+          currentPrice: cheapestPrice,
+          targetPrice: alert.targetPrice,
+        });
+      } else {
+        results.push({
+          alertId: alert.id,
+          success: true,
+          triggered: false,
+          currentPrice: cheapestPrice,
+          targetPrice: alert.targetPrice,
+        });
+      }
+
+      // Rate limiting delay
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    } catch (error) {
+      console.error(`Alert check failed for ${alert.id}:`, error);
+      results.push({
+        alertId: alert.id,
+        success: false,
+        triggered: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+
+  // Clean up expired alerts
+  await prisma.priceAlert.deleteMany({
+    where: {
+      expiresAt: {
+        lt: new Date(),
+      },
+    },
+  });
+
+  return results;
+}

@@ -6,6 +6,8 @@ import {
   FlightResultsList,
   RouteComparison,
   RouteComparisonSkeleton,
+  SearchProgress,
+  type SearchStage,
 } from "@/components/flights";
 import { NormalizedFlight } from "@/lib/amadeus";
 import { MultiCitySearchResult } from "@/lib/multi-city";
@@ -15,8 +17,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Compass, Route, Bell, Plane, Sparkles, Info, Clock, RefreshCw } from "lucide-react";
+import { Compass, Route, Bell, Plane, Sparkles, Info, Clock, RefreshCw, Bookmark, X, Play, Trash2, GitCompare, Loader2, Trophy, Timer, ArrowRight } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { getSavedSearches, saveSearch, deleteSavedSearch, SavedSearch } from "@/lib/saved-searches";
+import { useRouter } from "next/navigation";
 
 const CACHE_KEY = "flightSearchCache";
 const CACHE_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
@@ -45,6 +50,7 @@ interface SearchResult {
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [isComparingRoutes, setIsComparingRoutes] = useState(false);
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
@@ -53,6 +59,14 @@ export default function HomePage() {
   const [clarificationQuestions, setClarificationQuestions] = useState<string[]>([]);
   const [cachedAt, setCachedAt] = useState<number | null>(null);
   const [lastQuery, setLastQuery] = useState<string | null>(null);
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [searchStage, setSearchStage] = useState<SearchStage>("parsing");
+  const [isNaturalLanguageSearch, setIsNaturalLanguageSearch] = useState(true);
+
+  // Load saved searches on mount
+  useEffect(() => {
+    setSavedSearches(getSavedSearches());
+  }, []);
 
   // Save results to sessionStorage
   const cacheResults = useCallback((result: SearchResult, query?: string) => {
@@ -119,6 +133,8 @@ export default function HomePage() {
   // Manual structured search
   const handleSearch = async (params: SearchParams) => {
     setIsLoading(true);
+    setIsNaturalLanguageSearch(false);
+    setSearchStage("searching");
     setError(null);
     setClarificationQuestions([]);
 
@@ -136,12 +152,14 @@ export default function HomePage() {
         }),
       });
 
+      setSearchStage("processing");
       const data = await response.json();
 
       if (!response.ok || !data.success) {
         throw new Error(data.error || "Search failed");
       }
 
+      setSearchStage("complete");
       const result = {
         searchId: data.data.searchId,
         flights: data.data.flights,
@@ -163,16 +181,23 @@ export default function HomePage() {
   // Natural language search
   const handleNaturalSearch = async (query: string) => {
     setIsLoading(true);
+    setIsNaturalLanguageSearch(true);
+    setSearchStage("parsing");
     setError(null);
     setClarificationQuestions([]);
 
     try {
+      // Simulate parsing stage (API handles this but we show it)
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      setSearchStage("searching");
+
       const response = await fetch("/api/flights/search-natural", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query }),
       });
 
+      setSearchStage("processing");
       const data = await response.json();
 
       if (!response.ok || !data.success) {
@@ -185,6 +210,7 @@ export default function HomePage() {
         throw new Error(data.error || "Search failed");
       }
 
+      setSearchStage("complete");
       const result = {
         searchId: data.data.searchId,
         flights: data.data.flights,
@@ -218,6 +244,53 @@ export default function HomePage() {
     setCachedAt(null);
     setLastQuery(null);
     sessionStorage.removeItem(CACHE_KEY);
+  };
+
+  // Save current search
+  const handleSaveSearch = () => {
+    if (!lastQuery || !searchResult) return;
+
+    const parsed = searchResult.parsedQuery;
+    const saved = saveSearch({
+      name: parsed
+        ? `${parsed.origin.city} → ${parsed.destination.city}`
+        : lastQuery.slice(0, 50),
+      query: lastQuery,
+      origin: parsed?.origin.code,
+      destination: parsed?.destination.code,
+      departureDate: parsed?.dates.departure.date || undefined,
+      returnDate: parsed?.dates.return?.date || undefined,
+    });
+
+    setSavedSearches(getSavedSearches());
+    toast.success("Search saved", { description: saved.name });
+  };
+
+  // Delete saved search
+  const handleDeleteSavedSearch = (id: string) => {
+    deleteSavedSearch(id);
+    setSavedSearches(getSavedSearches());
+    toast.success("Search removed");
+  };
+
+  // Run saved search
+  const handleRunSavedSearch = async (search: SavedSearch) => {
+    await handleNaturalSearch(search.query);
+  };
+
+  // Create task from saved search
+  const handleCreateTaskFromSaved = (search: SavedSearch) => {
+    sessionStorage.setItem(
+      "createTaskFrom",
+      JSON.stringify({
+        origin: search.origin,
+        destination: search.destination,
+        departureDate: search.departureDate,
+        returnDate: search.returnDate,
+        name: search.name,
+      })
+    );
+    router.push("/tasks?create=true");
   };
 
   // Compare routes (multi-city search)
@@ -309,24 +382,34 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Search Progress */}
+      {isLoading && (
+        <SearchProgress
+          stage={searchStage}
+          isNaturalLanguage={isNaturalLanguageSearch}
+        />
+      )}
+
       {/* Results */}
-      {(isLoading || searchResult) && (
+      {searchResult && !isLoading && (
         <div className="pt-4">
           {/* Cached results indicator */}
-          {searchResult && cachedAt && !isLoading && (
+          {cachedAt && (
             <CachedResultsBanner
               cachedAt={cachedAt}
               onRefresh={handleRefreshPrices}
               onClear={clearResults}
+              onSave={handleSaveSearch}
               canRefresh={!!lastQuery}
+              canSave={!!lastQuery}
               isRefreshing={isLoading}
             />
           )}
           <FlightResultsList
-            flights={searchResult?.flights || []}
-            carriers={searchResult?.carriers}
-            isLoading={isLoading}
-            searchId={searchResult?.searchId}
+            flights={searchResult.flights}
+            carriers={searchResult.carriers}
+            isLoading={false}
+            searchId={searchResult.searchId}
           />
         </div>
       )}
@@ -345,6 +428,17 @@ export default function HomePage() {
             />
           ) : null}
         </div>
+      )}
+
+      {/* Saved Searches - Show when there are saved searches */}
+      {!isLoading && savedSearches.length > 0 && (
+        <SavedSearchesSection
+          searches={savedSearches}
+          onRun={handleRunSavedSearch}
+          onDelete={handleDeleteSavedSearch}
+          onCreateTask={handleCreateTaskFromSaved}
+          isLoading={isLoading}
+        />
       )}
 
       {/* Feature Cards - Show when no results */}
@@ -467,13 +561,17 @@ function CachedResultsBanner({
   cachedAt,
   onRefresh,
   onClear,
+  onSave,
   canRefresh,
+  canSave,
   isRefreshing,
 }: {
   cachedAt: number;
   onRefresh: () => void;
   onClear: () => void;
+  onSave: () => void;
   canRefresh: boolean;
+  canSave: boolean;
   isRefreshing: boolean;
 }) {
   const [timeAgo, setTimeAgo] = useState(formatRelativeTime(cachedAt));
@@ -493,6 +591,12 @@ function CachedResultsBanner({
         <span>Results from {timeAgo}</span>
       </div>
       <div className="flex items-center gap-2">
+        {canSave && (
+          <Button variant="outline" size="sm" onClick={onSave}>
+            <Bookmark className="h-4 w-4 mr-1.5" />
+            Save Search
+          </Button>
+        )}
         {canRefresh && (
           <Button
             variant="outline"
@@ -508,6 +612,355 @@ function CachedResultsBanner({
           Clear
         </Button>
       </div>
+    </div>
+  );
+}
+
+interface ComparisonResult {
+  search: SavedSearch;
+  cheapestPrice: number | null;
+  fastestDuration: number | null; // in minutes
+  directAvailable: boolean;
+  airlines: string[];
+  error?: string;
+  isLoading: boolean;
+}
+
+function SavedSearchesSection({
+  searches,
+  onRun,
+  onDelete,
+  onCreateTask,
+  isLoading,
+}: {
+  searches: SavedSearch[];
+  onRun: (search: SavedSearch) => void;
+  onDelete: (id: string) => void;
+  onCreateTask: (search: SavedSearch) => void;
+  isLoading: boolean;
+}) {
+  const [selectedForCompare, setSelectedForCompare] = useState<Set<string>>(new Set());
+  const [isComparing, setIsComparing] = useState(false);
+  const [comparisonResults, setComparisonResults] = useState<ComparisonResult[] | null>(null);
+
+  const toggleCompare = (id: string) => {
+    setSelectedForCompare((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else if (next.size < 3) {
+        next.add(id);
+      } else {
+        toast.error("Maximum 3 searches can be compared");
+      }
+      return next;
+    });
+  };
+
+  const runComparison = async () => {
+    const selectedSearches = searches.filter((s) => selectedForCompare.has(s.id));
+    if (selectedSearches.length < 2) {
+      toast.error("Select at least 2 searches to compare");
+      return;
+    }
+
+    setIsComparing(true);
+    setComparisonResults(
+      selectedSearches.map((search) => ({
+        search,
+        cheapestPrice: null,
+        fastestDuration: null,
+        directAvailable: false,
+        airlines: [],
+        isLoading: true,
+      }))
+    );
+
+    // Run all searches in parallel
+    const results = await Promise.all(
+      selectedSearches.map(async (search) => {
+        try {
+          const response = await fetch("/api/flights/search-natural", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: search.query }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok || !data.success || !data.data.flights?.length) {
+            return {
+              search,
+              cheapestPrice: null,
+              fastestDuration: null,
+              directAvailable: false,
+              airlines: [],
+              error: data.error || "No flights found",
+              isLoading: false,
+            };
+          }
+
+          const flights = data.data.flights as NormalizedFlight[];
+          const cheapest = Math.min(...flights.map((f) => f.price));
+          const durations = flights.map((f) => {
+            const match = f.totalDuration?.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+            if (!match) return Infinity;
+            return (parseInt(match[1] || "0") * 60) + parseInt(match[2] || "0");
+          });
+          const fastest = Math.min(...durations.filter((d) => d !== Infinity));
+          const hasDirects = flights.some((f) => f.legs[0]?.stops === 0);
+          const allAirlines = new Set<string>();
+          flights.forEach((f) => f.airlines.forEach((a) => allAirlines.add(a)));
+
+          return {
+            search,
+            cheapestPrice: cheapest,
+            fastestDuration: fastest === Infinity ? null : fastest,
+            directAvailable: hasDirects,
+            airlines: Array.from(allAirlines).slice(0, 5),
+            isLoading: false,
+          };
+        } catch (error) {
+          return {
+            search,
+            cheapestPrice: null,
+            fastestDuration: null,
+            directAvailable: false,
+            airlines: [],
+            error: error instanceof Error ? error.message : "Search failed",
+            isLoading: false,
+          };
+        }
+      })
+    );
+
+    setComparisonResults(results);
+    setIsComparing(false);
+    toast.success("Comparison complete");
+  };
+
+  const clearComparison = () => {
+    setComparisonResults(null);
+    setSelectedForCompare(new Set());
+  };
+
+  // Find best values for highlighting
+  const bestPrice = comparisonResults
+    ? Math.min(...comparisonResults.filter((r) => r.cheapestPrice).map((r) => r.cheapestPrice!))
+    : null;
+  const bestDuration = comparisonResults
+    ? Math.min(...comparisonResults.filter((r) => r.fastestDuration).map((r) => r.fastestDuration!))
+    : null;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-lg font-semibold flex items-center gap-2">
+          <Bookmark className="h-5 w-5" />
+          Saved Searches
+        </h2>
+        <div className="flex items-center gap-2">
+          {selectedForCompare.size >= 2 && (
+            <Button
+              size="sm"
+              onClick={runComparison}
+              disabled={isComparing}
+            >
+              {isComparing ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  Comparing...
+                </>
+              ) : (
+                <>
+                  <GitCompare className="h-3.5 w-3.5 mr-1.5" />
+                  Compare ({selectedForCompare.size})
+                </>
+              )}
+            </Button>
+          )}
+          <span className="text-sm text-muted-foreground">
+            {searches.length} saved
+          </span>
+        </div>
+      </div>
+
+      {/* Comparison Results */}
+      {comparisonResults && (
+        <div className="p-4 rounded-lg border border-border bg-card space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold flex items-center gap-2">
+              <GitCompare className="h-4 w-4" />
+              Comparison Results
+            </h3>
+            <Button variant="ghost" size="sm" onClick={clearComparison}>
+              <X className="h-4 w-4 mr-1" />
+              Clear
+            </Button>
+          </div>
+
+          <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${comparisonResults.length}, 1fr)` }}>
+            {comparisonResults.map((result) => (
+              <div
+                key={result.search.id}
+                className="p-4 rounded-lg border border-border bg-muted/30 space-y-3"
+              >
+                <div>
+                  <h4 className="font-medium truncate">{result.search.name}</h4>
+                  <p className="text-xs text-muted-foreground truncate">{result.search.query}</p>
+                </div>
+
+                {result.isLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : result.error ? (
+                  <p className="text-sm text-destructive">{result.error}</p>
+                ) : (
+                  <div className="space-y-2">
+                    {/* Price */}
+                    <div className={`flex items-center justify-between p-2 rounded ${result.cheapestPrice === bestPrice ? "bg-green-500/10 border border-green-500/30" : ""}`}>
+                      <span className="text-sm text-muted-foreground flex items-center gap-1">
+                        {result.cheapestPrice === bestPrice && <Trophy className="h-3.5 w-3.5 text-green-500" />}
+                        Cheapest
+                      </span>
+                      <span className={`font-semibold ${result.cheapestPrice === bestPrice ? "text-green-500" : ""}`}>
+                        ${result.cheapestPrice ? Math.round(result.cheapestPrice) : "N/A"}
+                      </span>
+                    </div>
+
+                    {/* Duration */}
+                    <div className={`flex items-center justify-between p-2 rounded ${result.fastestDuration === bestDuration ? "bg-blue-500/10 border border-blue-500/30" : ""}`}>
+                      <span className="text-sm text-muted-foreground flex items-center gap-1">
+                        {result.fastestDuration === bestDuration && <Trophy className="h-3.5 w-3.5 text-blue-500" />}
+                        Fastest
+                      </span>
+                      <span className={`font-semibold ${result.fastestDuration === bestDuration ? "text-blue-500" : ""}`}>
+                        {result.fastestDuration
+                          ? `${Math.floor(result.fastestDuration / 60)}h ${result.fastestDuration % 60}m`
+                          : "N/A"}
+                      </span>
+                    </div>
+
+                    {/* Direct */}
+                    <div className="flex items-center justify-between p-2">
+                      <span className="text-sm text-muted-foreground">Direct</span>
+                      <Badge variant={result.directAvailable ? "default" : "secondary"}>
+                        {result.directAvailable ? "Yes" : "No"}
+                      </Badge>
+                    </div>
+
+                    {/* Airlines */}
+                    {result.airlines.length > 0 && (
+                      <div className="pt-2 border-t border-border">
+                        <p className="text-xs text-muted-foreground mb-1">Airlines</p>
+                        <div className="flex flex-wrap gap-1">
+                          {result.airlines.map((a) => (
+                            <Badge key={a} variant="outline" className="text-xs">
+                              {a}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <Button
+                  size="sm"
+                  className="w-full mt-2"
+                  onClick={() => onRun(result.search)}
+                  disabled={isLoading}
+                >
+                  <ArrowRight className="h-3.5 w-3.5 mr-1" />
+                  View Details
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Saved Search Cards */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {searches.map((search) => (
+          <Card
+            key={search.id}
+            className={`group relative transition-all ${selectedForCompare.has(search.id) ? "ring-2 ring-primary" : ""}`}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                {/* Compare Checkbox */}
+                <Checkbox
+                  checked={selectedForCompare.has(search.id)}
+                  onCheckedChange={() => toggleCompare(search.id)}
+                  className="mt-1"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium truncate">{search.name}</h3>
+                      <p className="text-xs text-muted-foreground mt-1 truncate">
+                        {search.query}
+                      </p>
+                      {search.departureDate && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(search.departureDate).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                          {search.returnDate && (
+                            <>
+                              {" → "}
+                              {new Date(search.returnDate).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </>
+                          )}
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => onDelete(search.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2 mt-3">
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => onRun(search)}
+                      disabled={isLoading}
+                    >
+                      <Play className="h-3.5 w-3.5 mr-1" />
+                      Search
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onCreateTask(search)}
+                    >
+                      <Bell className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Helper text */}
+      {searches.length >= 2 && selectedForCompare.size === 0 && !comparisonResults && (
+        <p className="text-xs text-muted-foreground text-center">
+          Select 2-3 searches to compare prices and options side by side
+        </p>
+      )}
     </div>
   );
 }

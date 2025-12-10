@@ -1,9 +1,26 @@
 "use client";
 
+import { useState } from "react";
 import { NormalizedFlight, formatDuration } from "@/lib/amadeus";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plane, Clock, Circle, ExternalLink } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Plane, Clock, Circle, ExternalLink, Bell, BellRing, Copy, CalendarPlus, Share2, MoreHorizontal, Check } from "lucide-react";
+import { toast } from "sonner";
+import { copyToClipboard, downloadICS, shareNative } from "@/lib/flight-export";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 /**
  * Generates a Google Flights search URL for the given flight.
@@ -39,6 +56,78 @@ interface FlightCardProps {
 export function FlightCard({ flight, carriers, index = 0 }: FlightCardProps) {
   const outboundLeg = flight.legs[0];
   const returnLeg = flight.legs[1];
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [targetPrice, setTargetPrice] = useState(Math.round(flight.price * 0.9).toString());
+  const [isCreatingAlert, setIsCreatingAlert] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    const success = await copyToClipboard(flight);
+    if (success) {
+      setCopied(true);
+      toast.success("Copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    } else {
+      toast.error("Failed to copy");
+    }
+  };
+
+  const handleAddToCalendar = () => {
+    downloadICS(flight);
+    toast.success("Calendar file downloaded");
+  };
+
+  const handleShare = async () => {
+    const shared = await shareNative(flight);
+    if (!shared) {
+      // Fallback to copy
+      handleCopy();
+    }
+  };
+
+  const handleCreateAlert = async () => {
+    const price = parseFloat(targetPrice);
+    if (isNaN(price) || price <= 0) {
+      toast.error("Please enter a valid target price");
+      return;
+    }
+
+    setIsCreatingAlert(true);
+    try {
+      const response = await fetch("/api/alerts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          origin: outboundLeg.origin,
+          destination: outboundLeg.destination,
+          departureDate: outboundLeg.departureAt,
+          returnDate: returnLeg?.departureAt,
+          targetPrice: price,
+          currentPrice: flight.price,
+          currency: flight.currency,
+          flightId: flight.id,
+          airlines: flight.airlines,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to create alert");
+      }
+
+      toast.success("Price alert set!", {
+        description: `We'll notify you when ${outboundLeg.origin}→${outboundLeg.destination} drops below $${price}`,
+      });
+      setIsAlertOpen(false);
+    } catch (error) {
+      toast.error("Failed to create alert", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setIsCreatingAlert(false);
+    }
+  };
 
   const formatTime = (isoString: string) => {
     const date = new Date(isoString);
@@ -152,15 +241,100 @@ export function FlightCard({ flight, carriers, index = 0 }: FlightCardProps) {
               <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
             </a>
           </Button>
+
+          {/* Price Alert Button */}
+          <Popover open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 w-full"
+              >
+                <Bell className="h-3.5 w-3.5 mr-1.5" />
+                Set Alert
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64" align="end">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <BellRing className="h-4 w-4" />
+                    Price Alert
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    Get notified when this route drops below your target price.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="target-price" className="text-sm">
+                    Alert when below
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">$</span>
+                    <Input
+                      id="target-price"
+                      type="number"
+                      value={targetPrice}
+                      onChange={(e) => setTargetPrice(e.target.value)}
+                      className="flex-1"
+                      placeholder="Target price"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Current price: ${Math.round(flight.price)}
+                  </p>
+                </div>
+                <Button
+                  className="w-full"
+                  size="sm"
+                  onClick={handleCreateAlert}
+                  disabled={isCreatingAlert}
+                >
+                  {isCreatingAlert ? "Creating..." : "Create Alert"}
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
-      {/* Bottom bar with meta info */}
+      {/* Bottom bar with meta info and actions */}
       <div className="px-5 py-2.5 bg-muted/30 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
         <span>
           Book by {new Date(flight.lastTicketingDate).toLocaleDateString()}
         </span>
-        <span className="font-mono">{flight.id}</span>
+        <div className="flex items-center gap-2">
+          <span className="font-mono">{flight.id}</span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 -mr-2"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleCopy}>
+                {copied ? (
+                  <Check className="h-4 w-4 mr-2 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4 mr-2" />
+                )}
+                {copied ? "Copied!" : "Copy details"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleAddToCalendar}>
+                <CalendarPlus className="h-4 w-4 mr-2" />
+                Add to calendar
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShare}>
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </div>
   );

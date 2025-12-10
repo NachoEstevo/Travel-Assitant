@@ -137,3 +137,35 @@ model ChatMessage {
 
   @@index([createdAt])
 }
+
+// Quick price alerts (lightweight alternative to full scheduled tasks)
+model PriceAlert {
+  id          String   @id @default(cuid())
+
+  // Route info
+  origin      String   // IATA code
+  destination String   // IATA code
+  departureDate DateTime
+  returnDate  DateTime?
+
+  // Alert settings
+  targetPrice Float    // Alert when price drops below this
+  currentPrice Float   // Last known price
+  currency    String   @default("USD")
+
+  // Flight info for reference
+  flightId    String?  // Original flight ID from search
+  airlines    String[] // Airlines for this route
+
+  // Status
+  active      Boolean  @default(true)
+  triggered   Boolean  @default(false)
+  notifiedAt  DateTime?
+
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime // Auto-expire after departure date
+
+  @@index([active])
+  @@index([expiresAt])
+  @@index([origin, destination])
+}

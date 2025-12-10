@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runDueTasks } from "@/lib/scheduler";
+import { runDueTasks, checkPriceAlerts } from "@/lib/scheduler";
 
 // This endpoint can be called by external cron services (Vercel Cron, Railway, etc.)
 // For security, we check for a secret token in the Authorization header
@@ -17,22 +17,40 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const results = await runDueTasks();
+    // Run scheduled tasks
+    const taskResults = await runDueTasks();
 
-    // Summary of results
-    const summary = {
-      total: results.length,
-      successful: results.filter((r) => r.success).length,
-      failed: results.filter((r) => !r.success).length,
-      priceDrops: results.filter((r) => r.priceChange && r.priceChange < 0).length,
-      newLows: results.filter((r) => r.isNewLow).length,
-      targetsHit: results.filter((r) => r.hitPriceTarget).length,
+    // Check price alerts
+    const alertResults = await checkPriceAlerts();
+
+    // Summary of task results
+    const taskSummary = {
+      total: taskResults.length,
+      successful: taskResults.filter((r) => r.success).length,
+      failed: taskResults.filter((r) => !r.success).length,
+      priceDrops: taskResults.filter((r) => r.priceChange && r.priceChange < 0).length,
+      newLows: taskResults.filter((r) => r.isNewLow).length,
+      targetsHit: taskResults.filter((r) => r.hitPriceTarget).length,
+    };
+
+    // Summary of alert results
+    const alertSummary = {
+      total: alertResults.length,
+      successful: alertResults.filter((r) => r.success).length,
+      failed: alertResults.filter((r) => !r.success).length,
+      triggered: alertResults.filter((r) => r.triggered).length,
     };
 
     return NextResponse.json({
       success: true,
-      summary,
-      results,
+      tasks: {
+        summary: taskSummary,
+        results: taskResults,
+      },
+      alerts: {
+        summary: alertSummary,
+        results: alertResults,
+      },
     });
   } catch (error) {
     console.error("Cron run-tasks error:", error);

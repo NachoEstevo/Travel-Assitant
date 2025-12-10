@@ -37,6 +37,7 @@ const structuredSearchSchema = z.object({
   returnDate: z.string().optional(),
   adults: z.number().min(1).max(9),
   travelClass: z.enum(["ECONOMY", "PREMIUM_ECONOMY", "BUSINESS", "FIRST"]),
+  flexibleDates: z.boolean().optional(),
 });
 
 type StructuredSearchForm = z.infer<typeof structuredSearchSchema>;
@@ -67,6 +68,7 @@ export function FlightSearchForm({
       returnDate: "",
       adults: 1,
       travelClass: "ECONOMY",
+      flexibleDates: false,
     },
   });
 
@@ -284,6 +286,29 @@ export function FlightSearchForm({
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Flexible dates toggle */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border">
+                <Switch
+                  id="flexible-dates"
+                  checked={form.watch("flexibleDates") || false}
+                  onCheckedChange={(checked) =>
+                    form.setValue("flexibleDates", checked)
+                  }
+                  disabled={isLoading}
+                />
+                <div className="flex-1">
+                  <Label
+                    htmlFor="flexible-dates"
+                    className="font-medium cursor-pointer"
+                  >
+                    Flexible dates (±3 days)
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Search nearby dates to find better prices
+                  </p>
+                </div>
               </div>
 
               {/* Passengers & Class */}
