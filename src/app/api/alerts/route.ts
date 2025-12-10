@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from "@/lib/auth";
-import prisma from "@/lib/db";
+import { isAuthenticated } from "@/lib/auth";
+import { getDb } from "@/lib/db";
 import { z } from "zod";
 
 // GET - List all active price alerts
-export const GET = withAuth(async () => {
+export async function GET() {
+  const authenticated = await isAuthenticated();
+  if (!authenticated) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
+    const prisma = getDb();
     const alerts = await prisma.priceAlert.findMany({
       where: {
         active: true,
@@ -27,7 +33,7 @@ export const GET = withAuth(async () => {
       { status: 500 }
     );
   }
-});
+}
 
 // POST - Create a new price alert
 const createAlertSchema = z.object({
@@ -42,8 +48,14 @@ const createAlertSchema = z.object({
   airlines: z.array(z.string()).default([]),
 });
 
-export const POST = withAuth(async (request: NextRequest) => {
+export async function POST(request: NextRequest) {
+  const authenticated = await isAuthenticated();
+  if (!authenticated) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
+    const prisma = getDb();
     const body = await request.json();
     const data = createAlertSchema.parse(body);
 
@@ -102,7 +114,7 @@ export const POST = withAuth(async (request: NextRequest) => {
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: "Invalid request data", details: error.errors },
+        { success: false, error: "Invalid request data", details: error.issues },
         { status: 400 }
       );
     }
@@ -112,11 +124,17 @@ export const POST = withAuth(async (request: NextRequest) => {
       { status: 500 }
     );
   }
-});
+}
 
 // DELETE - Delete an alert
-export const DELETE = withAuth(async (request: NextRequest) => {
+export async function DELETE(request: NextRequest) {
+  const authenticated = await isAuthenticated();
+  if (!authenticated) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
+    const prisma = getDb();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
 
@@ -142,4 +160,4 @@ export const DELETE = withAuth(async (request: NextRequest) => {
       { status: 500 }
     );
   }
-});
+}

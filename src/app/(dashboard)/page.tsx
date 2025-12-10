@@ -256,8 +256,8 @@ export default function HomePage() {
         ? `${parsed.origin.city} → ${parsed.destination.city}`
         : lastQuery.slice(0, 50),
       query: lastQuery,
-      origin: parsed?.origin.code,
-      destination: parsed?.destination.code,
+      origin: parsed?.origin.iataCode,
+      destination: parsed?.destination.iataCode,
       departureDate: parsed?.dates.departure.date || undefined,
       returnDate: parsed?.dates.return?.date || undefined,
     });
@@ -328,18 +328,49 @@ export default function HomePage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-10">
       {/* Hero Section */}
-      <div className="text-center space-y-4 py-6">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-2">
-          <Plane className="w-8 h-8 text-primary animate-plane" />
+      <div className="text-center space-y-6 py-8 relative">
+        {/* Decorative elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-1/4 w-48 h-48 bg-accent/5 rounded-full blur-3xl" />
         </div>
-        <h1 className="font-display text-4xl md:text-5xl font-semibold tracking-tight">
-          Find Your Flight
-        </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Search millions of flights to find the best deals. Describe your trip naturally or use our manual search.
-        </p>
+
+        <div className="relative">
+          {/* Icon with animated rings */}
+          <div className="hero-icon w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 mb-4 mx-auto border border-primary/10">
+            <Plane className="w-9 h-9 text-primary animate-float" style={{ animationDelay: '0.5s' }} />
+          </div>
+
+          {/* Headline with gradient accent */}
+          <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight">
+            <span className="text-gradient">Find Your</span>{" "}
+            <span className="text-gradient-accent">Perfect Flight</span>
+          </h1>
+
+          {/* Subheadline */}
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mt-4 leading-relaxed">
+            Search millions of flights with AI-powered natural language.
+            <span className="hidden sm:inline"> Just describe your trip and let us find the best deals.</span>
+          </p>
+
+          {/* Trust indicators */}
+          <div className="flex items-center justify-center gap-6 mt-6 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+              <span>Real-time prices</span>
+            </div>
+            <div className="hidden sm:flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span>AI-powered search</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Bell className="w-4 h-4 text-primary" />
+              <span>Price alerts</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Search Form */}
@@ -443,22 +474,33 @@ export default function HomePage() {
 
       {/* Feature Cards - Show when no results */}
       {!searchResult && !isLoading && (
-        <div className="grid md:grid-cols-3 gap-6 pt-8">
-          <FeatureCard
-            icon={<Compass className="w-6 h-6" />}
-            title="Natural Language"
-            description="Just describe your trip naturally - dates, destinations, budget, flexibility - and AI will understand"
-          />
-          <FeatureCard
-            icon={<Route className="w-6 h-6" />}
-            title="Multi-City Routes"
-            description="Get suggestions for creative routes through stopover cities that could save you money"
-          />
-          <FeatureCard
-            icon={<Bell className="w-6 h-6" />}
-            title="Price Tracking"
-            description="Set up scheduled searches and get notified when prices drop or availability changes"
-          />
+        <div className="pt-12 pb-4">
+          {/* Section header */}
+          <div className="text-center mb-8">
+            <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-2">Why Choose Voyager</p>
+            <h2 className="font-display text-2xl font-semibold">Smarter Flight Search</h2>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <FeatureCard
+              icon={<Compass className="w-6 h-6" />}
+              title="Natural Language"
+              description="Just describe your trip naturally - dates, destinations, budget, flexibility - and AI will understand"
+              accentColor="primary"
+            />
+            <FeatureCard
+              icon={<Route className="w-6 h-6" />}
+              title="Multi-City Routes"
+              description="Get suggestions for creative routes through stopover cities that could save you money"
+              accentColor="accent"
+            />
+            <FeatureCard
+              icon={<Bell className="w-6 h-6" />}
+              title="Price Tracking"
+              description="Set up scheduled searches and get notified when prices drop or availability changes"
+              accentColor="sage"
+            />
+          </div>
         </div>
       )}
     </div>
@@ -521,18 +563,26 @@ function FeatureCard({
   icon,
   title,
   description,
+  accentColor = "primary",
 }: {
   icon: React.ReactNode;
   title: string;
   description: string;
+  accentColor?: "primary" | "accent" | "sage";
 }) {
+  const colorClasses = {
+    primary: "from-primary/10 to-primary/5 text-primary border-primary/10",
+    accent: "from-accent/10 to-accent/5 text-accent border-accent/10",
+    sage: "from-sage/10 to-sage/5 text-sage border-sage/10",
+  };
+
   return (
-    <Card className="card-hover border-border/50">
-      <CardHeader className="pb-2">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-muted mb-3 text-primary">
+    <Card className="feature-card border-border/50 group">
+      <CardHeader className="pb-3">
+        <div className={`inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br ${colorClasses[accentColor]} mb-4 border transition-transform duration-300 group-hover:scale-110`}>
           {icon}
         </div>
-        <CardTitle className="font-display text-xl">{title}</CardTitle>
+        <CardTitle className="font-display text-xl tracking-tight">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground leading-relaxed">

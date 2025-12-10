@@ -43,7 +43,7 @@ export function AirportSearch({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch airports from API
   const searchAirports = useCallback(async (searchQuery: string) => {
@@ -179,7 +179,7 @@ export function AirportSearch({
       <Label htmlFor={id}>{label}</Label>
       <div className="relative">
         <Plane
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
+          className="absolute left-3 top-1/2 w-4 h-4 text-muted-foreground pointer-events-none"
           style={{ transform: `translateY(-50%) rotate(${iconRotation})` }}
         />
         <Input

@@ -214,7 +214,7 @@ export async function searchFlights(
     // The Amadeus SDK returns the response with data being the array of offers directly
     // and result containing the full response with dictionaries
     const offers = response.data as FlightOffer[] | undefined;
-    const result = response.result as FlightSearchResponse | undefined;
+    const result = response.result as unknown as FlightSearchResponse | undefined;
 
     console.log(`Amadeus raw response - offers count: ${offers?.length ?? 0}`);
 

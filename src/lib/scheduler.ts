@@ -322,25 +322,35 @@ export async function checkPriceAlerts(): Promise<AlertCheckResult[]> {
           },
         });
 
-        // Send notification (reuse notification system)
+        // Send notification (use resend and telegram modules directly)
         try {
-          const { sendEmailNotification, sendTelegramNotification } = await import("./notifications");
+          const { sendPriceAlertEmail, isEmailConfigured } = await import("./resend");
+          const { sendTelegramPriceAlert, isTelegramConfigured } = await import("./telegram");
 
-          const message = `Price Alert Triggered!\n\n${alert.origin} → ${alert.destination}\nTarget: $${alert.targetPrice}\nCurrent: $${Math.round(cheapestPrice)}\n\nDeparture: ${alert.departureDate.toLocaleDateString()}`;
+          const alertData = {
+            taskName: `Price Alert: ${alert.origin} → ${alert.destination}`,
+            origin: alert.origin,
+            destination: alert.destination,
+            departureDate: alert.departureDate.toISOString().split("T")[0],
+            returnDate: alert.returnDate?.toISOString().split("T")[0],
+            currentPrice: Math.round(cheapestPrice),
+            previousPrice: alert.currentPrice,
+            priceTarget: alert.targetPrice,
+            currency: alert.currency,
+            airlines: alert.airlines,
+            isNewLow: true,
+            hitPriceTarget: true,
+          };
 
-          await Promise.all([
-            sendEmailNotification({
-              subject: `Price Drop: ${alert.origin} → ${alert.destination} now $${Math.round(cheapestPrice)}`,
-              text: message,
-              html: `<h2>Price Alert Triggered!</h2>
-                <p><strong>${alert.origin} → ${alert.destination}</strong></p>
-                <p>Target Price: $${alert.targetPrice}</p>
-                <p>Current Price: <strong>$${Math.round(cheapestPrice)}</strong></p>
-                <p>Departure: ${alert.departureDate.toLocaleDateString()}</p>
-                <p><a href="https://www.google.com/travel/flights?q=flights%20from%20${alert.origin}%20to%20${alert.destination}%20on%20${alert.departureDate.toISOString().split("T")[0]}">Search on Google Flights</a></p>`,
-            }),
-            sendTelegramNotification(message),
-          ]);
+          const notifications = [];
+          if (isEmailConfigured()) {
+            notifications.push(sendPriceAlertEmail(alertData));
+          }
+          if (isTelegramConfigured()) {
+            notifications.push(sendTelegramPriceAlert(alertData));
+          }
+
+          await Promise.all(notifications);
         } catch (notifyError) {
           console.error("Failed to send alert notification:", notifyError);
         }

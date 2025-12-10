@@ -52,6 +52,7 @@ export const db = {
   get notification() { return getDb().notification; },
   get chatMessage() { return getDb().chatMessage; },
   get priceHistory() { return getDb().priceHistory; },
+  get priceAlert() { return getDb().priceAlert; },
   $transaction: (...args: Parameters<PrismaClient['$transaction']>) => getDb().$transaction(...args),
   $connect: () => getDb().$connect(),
   $disconnect: () => getDb().$disconnect(),

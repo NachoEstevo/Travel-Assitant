@@ -26,6 +26,8 @@ import {
   Loader2,
   Route,
   Plane,
+  Wand2,
+  CalendarDays,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { AirportSearch } from "./airport-search";
@@ -80,7 +82,6 @@ export function FlightSearchForm({
 
     onSearch(searchParams);
 
-    // Also trigger route comparison if enabled
     if (compareRoutes && onCompareRoutes && tripType === "oneway") {
       onCompareRoutes(searchParams);
     }
@@ -99,226 +100,270 @@ export function FlightSearchForm({
   const minDate = tomorrow.toISOString().split("T")[0];
 
   return (
-    <Card className="overflow-hidden border-border/60 shadow-lg gradient-card">
-      <Tabs defaultValue="natural" className="w-full">
-        <div className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/50 px-6 pt-4">
-          <TabsList className="grid w-full max-w-md grid-cols-2 bg-muted/60 p-1">
-            <TabsTrigger
-              value="natural"
-              className="data-[state=active]:bg-card data-[state=active]:shadow-md transition-all duration-200"
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Natural Language
-            </TabsTrigger>
-            <TabsTrigger
-              value="structured"
-              className="data-[state=active]:bg-card data-[state=active]:shadow-md transition-all duration-200"
-            >
-              <Search className="w-4 h-4 mr-2" />
-              Manual Search
-            </TabsTrigger>
-          </TabsList>
-        </div>
+    <div>
+      <Card className="overflow-hidden border-border/50 shadow-lg bg-card">
+        <Tabs defaultValue="natural" className="w-full">
+          {/* Tab Header */}
+          <div className="relative bg-muted/30 border-b border-border/40 px-6 py-4">
+            <TabsList className="relative grid w-full max-w-md grid-cols-2 bg-card p-1 shadow-sm border border-border/50 h-11">
+              <TabsTrigger
+                value="natural"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200 gap-2 h-9"
+              >
+                <Wand2 className="w-4 h-4" />
+                AI Search
+              </TabsTrigger>
+              <TabsTrigger
+                value="structured"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all duration-200 gap-2 h-9"
+              >
+                <Search className="w-4 h-4" />
+                Manual Search
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-        {/* Natural Language Search */}
-        <TabsContent value="natural" className="m-0">
-          <CardContent className="p-6">
-            <form onSubmit={handleNaturalSubmit} className="space-y-5">
-              <div className="space-y-3">
-                <Label htmlFor="natural-query" className="text-base font-medium flex items-center gap-2">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold">AI</span>
-                  Describe your trip
-                </Label>
-                <Textarea
-                  id="natural-query"
-                  value={naturalQuery}
-                  onChange={(e) => setNaturalQuery(e.target.value)}
-                  placeholder="I want to go to Japan in February for about 3 weeks, budget under $1500 from Buenos Aires. I'm flexible with exact dates."
-                  className="min-h-[120px] resize-none text-base leading-relaxed border-border/60 focus:border-primary/50 transition-colors"
-                  disabled={isLoading}
-                />
-                <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                  <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground/50" />
-                  Include your origin, destination, dates, budget, and any flexibility
-                </p>
-              </div>
+          {/* Natural Language Search */}
+          <TabsContent value="natural" className="m-0">
+            <CardContent className="p-6 md:p-8">
+              <form onSubmit={handleNaturalSubmit} className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10">
+                      <Sparkles className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <Label htmlFor="natural-query" className="text-base font-semibold">
+                        Describe your trip
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Our AI understands natural language in English or Spanish
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="flex items-center gap-4">
-                <Button
-                  type="submit"
-                  size="lg"
-                  disabled={!naturalQuery.trim() || isLoading || !onNaturalSearch}
-                  className="font-medium btn-press shadow-md hover:shadow-lg transition-shadow px-6"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Searching...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Find Flights
-                    </>
-                  )}
-                </Button>
-                {!onNaturalSearch && (
-                  <p className="text-sm text-muted-foreground italic">
-                    AI search coming soon - use manual search for now
-                  </p>
-                )}
-              </div>
-            </form>
-          </CardContent>
-        </TabsContent>
+                  <div className="relative">
+                    <Textarea
+                      id="natural-query"
+                      value={naturalQuery}
+                      onChange={(e) => setNaturalQuery(e.target.value)}
+                      placeholder="I want to go to Japan in February for about 3 weeks, budget under $1500 from Buenos Aires. I'm flexible with exact dates..."
+                      className="min-h-[140px] resize-none text-base leading-relaxed border-border/60 focus:border-primary/50 transition-all pr-4 input-premium rounded-xl"
+                      disabled={isLoading}
+                    />
+                    {/* Character indicator */}
+                    <div className="absolute bottom-3 right-3 text-[10px] text-muted-foreground/50">
+                      {naturalQuery.length > 0 && `${naturalQuery.length} chars`}
+                    </div>
+                  </div>
 
-        {/* Structured Search */}
-        <TabsContent value="structured" className="m-0">
-          <CardContent className="p-6">
-            <form
-              onSubmit={form.handleSubmit(handleStructuredSubmit)}
-              className="space-y-6"
-            >
-              {/* Trip type selector */}
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-4">
-                  <Button
-                    type="button"
-                    variant={tripType === "roundtrip" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      setTripType("roundtrip");
-                      setCompareRoutes(false);
-                    }}
-                  >
-                    <ArrowRightLeft className="w-4 h-4 mr-2" />
-                    Round Trip
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={tripType === "oneway" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setTripType("oneway")}
-                  >
-                    <Plane className="w-4 h-4 mr-2" />
-                    One Way
-                  </Button>
+                  {/* Example queries */}
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-xs text-muted-foreground">Try:</span>
+                    {[
+                      "Weekend in Miami from NYC",
+                      "Cheap flights to Europe in summer",
+                      "Business class to Tokyo",
+                    ].map((example) => (
+                      <button
+                        key={example}
+                        type="button"
+                        onClick={() => setNaturalQuery(example)}
+                        className="text-xs px-2.5 py-1 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        disabled={isLoading}
+                      >
+                        {example}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {/* Compare Routes toggle - only for one-way trips */}
-                {tripType === "oneway" && onCompareRoutes && (
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="compare-routes"
-                      checked={compareRoutes}
-                      onCheckedChange={setCompareRoutes}
-                      disabled={isLoading}
-                    />
-                    <Label
-                      htmlFor="compare-routes"
-                      className="text-sm font-medium flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Route className="w-4 h-4 text-primary" />
-                      Compare Routes
-                    </Label>
-                  </div>
-                )}
-              </div>
-
-              {/* Origin & Destination */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <AirportSearch
-                  id="origin"
-                  label="From"
-                  value={form.watch("origin")}
-                  onChange={(code) => form.setValue("origin", code, { shouldValidate: true })}
-                  placeholder="Search city or airport..."
-                  disabled={isLoading}
-                  iconRotation="-45deg"
-                  error={form.formState.errors.origin?.message}
-                />
-
-                <AirportSearch
-                  id="destination"
-                  label="To"
-                  value={form.watch("destination")}
-                  onChange={(code) => form.setValue("destination", code, { shouldValidate: true })}
-                  placeholder="Search city or airport..."
-                  disabled={isLoading}
-                  iconRotation="45deg"
-                  error={form.formState.errors.destination?.message}
-                />
-              </div>
-
-              {/* Dates */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="departureDate">Departure</Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="departureDate"
-                      type="date"
-                      {...form.register("departureDate")}
-                      min={minDate}
-                      className="pl-10"
-                      disabled={isLoading}
-                    />
-                  </div>
-                  {form.formState.errors.departureDate && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.departureDate.message}
+                <div className="flex items-center gap-4 pt-2">
+                  <Button
+                    type="submit"
+                    size="lg"
+                    disabled={!naturalQuery.trim() || isLoading || !onNaturalSearch}
+                    className="font-semibold btn-press btn-premium shadow-lg hover:shadow-xl transition-all px-8 h-12"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Searching...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5 mr-2" />
+                        Find Flights
+                      </>
+                    )}
+                  </Button>
+                  {!onNaturalSearch && (
+                    <p className="text-sm text-muted-foreground italic">
+                      AI search coming soon
                     </p>
                   )}
                 </div>
+              </form>
+            </CardContent>
+          </TabsContent>
 
-                {tripType === "roundtrip" && (
+          {/* Structured Search */}
+          <TabsContent value="structured" className="m-0">
+            <CardContent className="p-6 md:p-8">
+              <form
+                onSubmit={form.handleSubmit(handleStructuredSubmit)}
+                className="space-y-6"
+              >
+                {/* Trip type selector */}
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-2 p-1 rounded-xl bg-muted/40">
+                    <Button
+                      type="button"
+                      variant={tripType === "roundtrip" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => {
+                        setTripType("roundtrip");
+                        setCompareRoutes(false);
+                      }}
+                      className="gap-2"
+                    >
+                      <ArrowRightLeft className="w-4 h-4" />
+                      Round Trip
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={tripType === "oneway" ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setTripType("oneway")}
+                      className="gap-2"
+                    >
+                      <Plane className="w-4 h-4" />
+                      One Way
+                    </Button>
+                  </div>
+
+                  {/* Compare Routes toggle */}
+                  {tripType === "oneway" && onCompareRoutes && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-accent/10 border border-accent/20">
+                      <Switch
+                        id="compare-routes"
+                        checked={compareRoutes}
+                        onCheckedChange={setCompareRoutes}
+                        disabled={isLoading}
+                      />
+                      <Label
+                        htmlFor="compare-routes"
+                        className="text-sm font-medium flex items-center gap-1.5 cursor-pointer text-accent"
+                      >
+                        <Route className="w-4 h-4" />
+                        Compare Routes
+                      </Label>
+                    </div>
+                  )}
+                </div>
+
+                {/* Origin & Destination */}
+                <div className="grid md:grid-cols-2 gap-5">
+                  <AirportSearch
+                    id="origin"
+                    label="From"
+                    value={form.watch("origin")}
+                    onChange={(code) => form.setValue("origin", code, { shouldValidate: true })}
+                    placeholder="City or airport..."
+                    disabled={isLoading}
+                    iconRotation="-45deg"
+                    error={form.formState.errors.origin?.message}
+                  />
+
+                  <AirportSearch
+                    id="destination"
+                    label="To"
+                    value={form.watch("destination")}
+                    onChange={(code) => form.setValue("destination", code, { shouldValidate: true })}
+                    placeholder="City or airport..."
+                    disabled={isLoading}
+                    iconRotation="45deg"
+                    error={form.formState.errors.destination?.message}
+                  />
+                </div>
+
+                {/* Dates */}
+                <div className="grid md:grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <Label htmlFor="returnDate">Return</Label>
+                    <Label htmlFor="departureDate" className="flex items-center gap-2">
+                      <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                      Departure
+                    </Label>
                     <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                       <Input
-                        id="returnDate"
+                        id="departureDate"
                         type="date"
-                        {...form.register("returnDate")}
-                        min={form.watch("departureDate") || minDate}
-                        className="pl-10"
+                        {...form.register("departureDate")}
+                        min={minDate}
+                        className="pl-10 input-premium"
                         disabled={isLoading}
                       />
                     </div>
+                    {form.formState.errors.departureDate && (
+                      <p className="text-sm text-destructive">
+                        {form.formState.errors.departureDate.message}
+                      </p>
+                    )}
                   </div>
-                )}
-              </div>
 
-              {/* Flexible dates toggle */}
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border">
-                <Switch
-                  id="flexible-dates"
-                  checked={form.watch("flexibleDates") || false}
-                  onCheckedChange={(checked) =>
-                    form.setValue("flexibleDates", checked)
-                  }
-                  disabled={isLoading}
-                />
-                <div className="flex-1">
-                  <Label
-                    htmlFor="flexible-dates"
-                    className="font-medium cursor-pointer"
-                  >
-                    Flexible dates (±3 days)
-                  </Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Search nearby dates to find better prices
-                  </p>
+                  {tripType === "roundtrip" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="returnDate" className="flex items-center gap-2">
+                        <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                        Return
+                      </Label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          id="returnDate"
+                          type="date"
+                          {...form.register("returnDate")}
+                          min={form.watch("departureDate") || minDate}
+                          className="pl-10 input-premium"
+                          disabled={isLoading}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
 
-              {/* Passengers & Class */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="adults">Passengers</Label>
-                  <div className="relative">
-                    <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                {/* Flexible dates toggle */}
+                <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-muted/40 to-muted/20 border border-border/50">
+                  <Switch
+                    id="flexible-dates"
+                    checked={form.watch("flexibleDates") || false}
+                    onCheckedChange={(checked) =>
+                      form.setValue("flexibleDates", checked)
+                    }
+                    disabled={isLoading}
+                  />
+                  <div className="flex-1">
+                    <Label
+                      htmlFor="flexible-dates"
+                      className="font-semibold cursor-pointer flex items-center gap-2"
+                    >
+                      <CalendarDays className="w-4 h-4 text-primary" />
+                      Flexible dates (±3 days)
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Search nearby dates to find better prices
+                    </p>
+                  </div>
+                </div>
+
+                {/* Passengers & Class */}
+                <div className="grid md:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="adults" className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-muted-foreground" />
+                      Passengers
+                    </Label>
                     <Select
                       value={form.watch("adults").toString()}
                       onValueChange={(v) =>
@@ -326,7 +371,7 @@ export function FlightSearchForm({
                       }
                       disabled={isLoading}
                     >
-                      <SelectTrigger className="pl-10">
+                      <SelectTrigger className="input-premium">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -338,57 +383,60 @@ export function FlightSearchForm({
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="travelClass" className="flex items-center gap-2">
+                      <Plane className="w-4 h-4 text-muted-foreground" />
+                      Class
+                    </Label>
+                    <Select
+                      value={form.watch("travelClass")}
+                      onValueChange={(v) =>
+                        form.setValue(
+                          "travelClass",
+                          v as StructuredSearchForm["travelClass"]
+                        )
+                      }
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger className="input-premium">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ECONOMY">Economy</SelectItem>
+                        <SelectItem value="PREMIUM_ECONOMY">
+                          Premium Economy
+                        </SelectItem>
+                        <SelectItem value="BUSINESS">Business</SelectItem>
+                        <SelectItem value="FIRST">First Class</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="travelClass">Class</Label>
-                  <Select
-                    value={form.watch("travelClass")}
-                    onValueChange={(v) =>
-                      form.setValue(
-                        "travelClass",
-                        v as StructuredSearchForm["travelClass"]
-                      )
-                    }
-                    disabled={isLoading}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ECONOMY">Economy</SelectItem>
-                      <SelectItem value="PREMIUM_ECONOMY">
-                        Premium Economy
-                      </SelectItem>
-                      <SelectItem value="BUSINESS">Business</SelectItem>
-                      <SelectItem value="FIRST">First Class</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                size="lg"
-                disabled={isLoading}
-                className="w-full md:w-auto font-medium"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Searching...
-                  </>
-                ) : (
-                  <>
-                    <Search className="w-4 h-4 mr-2" />
-                    Search Flights
-                  </>
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </TabsContent>
-      </Tabs>
-    </Card>
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={isLoading}
+                  className="w-full md:w-auto font-semibold btn-press btn-premium shadow-lg hover:shadow-xl transition-all px-10 h-12"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                      Searching...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="w-5 h-5 mr-2" />
+                      Search Flights
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </TabsContent>
+        </Tabs>
+      </Card>
+    </div>
   );
 }

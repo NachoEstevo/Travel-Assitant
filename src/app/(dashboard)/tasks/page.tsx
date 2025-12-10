@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,13 +8,33 @@ import { TaskCard, TaskCardSkeleton, TaskForm, TaskData, TaskDetailDialog } from
 import { Plus, Bell, Clock, RefreshCw, Loader2 } from "lucide-react";
 
 export default function TasksPage() {
+  return (
+    <Suspense fallback={
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+        <TaskCardSkeleton />
+        <TaskCardSkeleton />
+      </div>
+    }>
+      <TasksPageContent />
+    </Suspense>
+  );
+}
+
+function TasksPageContent() {
   const searchParams = useSearchParams();
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskData | null>(null);
-  const [prefillTask, setPrefillTask] = useState<Partial<TaskData> | null>(null);
+  const [prefillTask, setPrefillTask] = useState<{
+    name?: string;
+    origin?: string;
+    destination?: string;
+    departureDate?: string;
+    returnDate?: string;
+  } | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -32,7 +52,7 @@ export default function TasksPage() {
             destination: data.destination || "",
             departureDate: data.departureDate || "",
             returnDate: data.returnDate || undefined,
-          } as Partial<TaskData>);
+          });
           setIsFormOpen(true);
         } catch (e) {
           console.error("Failed to parse prefill data:", e);
