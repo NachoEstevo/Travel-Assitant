@@ -1,0 +1,139 @@
+// PersonalTravel - Flight Search App Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// User session for simple password auth
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
+
+// Search queries (natural language + parsed)
+model SearchQuery {
+  id        String   @id @default(cuid())
+  rawPrompt String   // Original natural language input
+  parsed    Json     // Structured search parameters
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  results   FlightResult[]
+  task      ScheduledTask?
+}
+
+// Flight search results
+model FlightResult {
+  id          String   @id @default(cuid())
+  searchId    String
+  search      SearchQuery @relation(fields: [searchId], references: [id], onDelete: Cascade)
+
+  source      String   // "amadeus" | "google_flights"
+  itinerary   Json     // Full flight data
+  price       Float
+  currency    String   @default("USD")
+  isMultiCity Boolean  @default(false)
+  legs        Int      @default(1) // Number of separate bookings
+
+  // Key flight info for quick access
+  origin      String   // IATA code
+  destination String   // IATA code
+  departureAt DateTime
+  arrivalAt   DateTime
+  stops       Int      @default(0)
+  airlines    String[] // Array of airline codes
+
+  createdAt   DateTime @default(now())
+
+  @@index([searchId])
+  @@index([source])
+  @@index([price])
+}
+
+// Scheduled recurring searches
+model ScheduledTask {
+  id          String   @id @default(cuid())
+  name        String   // User-friendly name for the task
+  searchId    String?  @unique
+  search      SearchQuery? @relation(fields: [searchId], references: [id], onDelete: Cascade)
+
+  // Search parameters (stored directly for flexibility)
+  origin      String   // IATA code
+  destination String   // IATA code
+  departureDate String // YYYY-MM-DD or relative like "+30d"
+  returnDate  String?  // Optional for one-way
+  adults      Int      @default(1)
+  travelClass String   @default("ECONOMY")
+
+  cronExpr    String   // e.g., "0 9,18 * * *" (9am, 6pm daily)
+  priceTarget Float?   // Alert if price drops below this
+  active      Boolean  @default(true)
+
+  lastRun     DateTime?
+  nextRun     DateTime?
+  lastPrice   Float?   // Track for price change alerts
+  lowestPrice Float?   // Lowest price ever seen
+
+  priceHistory PriceHistory[]
+  notifications Notification[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([active])
+  @@index([nextRun])
+}
+
+// Price history for tracking changes over time
+model PriceHistory {
+  id       String   @id @default(cuid())
+  taskId   String
+  task     ScheduledTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  price    Float
+  currency String   @default("USD")
+
+  // Best flight details at this price point
+  airlines String[]
+  stops    Int      @default(0)
+  duration String?  // e.g., "14h 30m"
+
+  recordedAt DateTime @default(now())
+
+  @@index([taskId])
+  @@index([recordedAt])
+}
+
+// Notification log
+model Notification {
+  id       String   @id @default(cuid())
+  taskId   String
+  task     ScheduledTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  channel  String   // "email" | "telegram"
+  type     String   // "price_drop" | "new_route" | "availability_change" | "sold_out"
+  payload  Json     // Notification content
+
+  sentAt   DateTime @default(now())
+
+  @@index([taskId])
+  @@index([channel])
+}
+
+// Chat messages for conversation history
+model ChatMessage {
+  id        String   @id @default(cuid())
+  role      String   // "user" | "assistant" | "system"
+  content   String
+  searchId  String?  // Link to search if this message triggered one
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

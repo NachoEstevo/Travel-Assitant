@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:developers.skyscanner.net)",
+      "WebFetch(domain:developers.amadeus.com)",
+      "WebSearch",
+      "Bash(npx create-next-app:*)",
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(npx shadcn@latest init:*)",
+      "Bash(npx shadcn@latest add button card input label badge skeleton separator scroll-area -y)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma init)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npm run build:*)",
+      "Skill(frontend-design:frontend-design)",
+      "WebFetch(domain:platform.openai.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(docker compose:*)",
+      "Bash(timeout /t 3 /nobreak)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(npx kill-port:*)",
+      "Bash(exit 0)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(node -e:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(timeout /t 8 /nobreak)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,26 +1,278 @@
-@import "tailwindcss";
+/* Import Google Fonts - Editorial Travel Aesthetic */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&display=swap');
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+
+  /* Editorial Travel Palette */
+  --color-cream: #FAF7F2;
+  --color-cream-dark: #F0EBE3;
+  --color-charcoal: #2C2C2C;
+  --color-charcoal-light: #5A5A5A;
+  --color-terracotta: #C4704B;
+  --color-terracotta-light: #D4896A;
+  --color-terracotta-dark: #A85A38;
+  --color-sage: #7D8B72;
+  --color-sage-light: #A8B49D;
+  --color-midnight: #1A1F2E;
+
+  /* Semantic mapping */
+  --color-background: var(--color-cream);
+  --color-foreground: var(--color-charcoal);
+  --color-muted: var(--color-cream-dark);
+  --color-muted-foreground: var(--color-charcoal-light);
+  --color-primary: var(--color-terracotta);
+  --color-primary-foreground: var(--color-cream);
+  --color-secondary: var(--color-cream-dark);
+  --color-secondary-foreground: var(--color-charcoal);
+  --color-accent: var(--color-sage);
+  --color-accent-foreground: var(--color-cream);
+  --color-card: #FFFFFF;
+  --color-card-foreground: var(--color-charcoal);
+  --color-popover: #FFFFFF;
+  --color-popover-foreground: var(--color-charcoal);
+  --color-border: #E5E0D8;
+  --color-input: #E5E0D8;
+  --color-ring: var(--color-terracotta);
+  --color-destructive: #B44141;
+  --color-destructive-foreground: var(--color-cream);
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Base Styles */
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Subtle paper texture overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.25;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.06'/%3E%3C/svg%3E");
+  z-index: 9999;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Display font utility */
+.font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+}
+
+/* Perforation effect for boarding pass style */
+.perforation {
+  background-image: radial-gradient(circle, var(--color-cream-dark) 2px, transparent 2px);
+  background-size: 12px 12px;
+  background-position: center;
+}
+
+.perforation-vertical {
+  position: relative;
+}
+
+.perforation-vertical::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--color-border) 0px,
+    var(--color-border) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+/* Flight path line */
+.flight-path {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+}
+
+@keyframes draw-flight-path {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-flight-path {
+  animation: draw-flight-path 1s ease-out forwards;
+}
+
+/* Stagger animation delays for lists */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
+.stagger-6 { animation-delay: 0.3s; }
+.stagger-7 { animation-delay: 0.35s; }
+.stagger-8 { animation-delay: 0.4s; }
+.stagger-9 { animation-delay: 0.45s; }
+.stagger-10 { animation-delay: 0.5s; }
+
+/* Slide up animation */
+@keyframes slide-up-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up-fade 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
+}
+
+/* Shimmer for loading states */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-cream-dark) 25%,
+    var(--color-cream) 50%,
+    var(--color-cream-dark) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Price highlight animation */
+@keyframes price-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(196, 112, 75, 0);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(196, 112, 75, 0.15);
+  }
+}
+
+.animate-price-glow {
+  animation: price-glow 2s ease-in-out infinite;
+}
+
+/* Plane icon animation */
+@keyframes plane-fly {
+  0% {
+    transform: translateX(-4px) rotate(-2deg);
+  }
+  50% {
+    transform: translateX(4px) rotate(2deg);
+  }
+  100% {
+    transform: translateX(-4px) rotate(-2deg);
+  }
+}
+
+.animate-plane {
+  animation: plane-fly 3s ease-in-out infinite;
+}
+
+/* Card hover lift effect */
+.card-hover {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px -12px rgba(44, 44, 44, 0.15);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-cream-dark);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-charcoal-light);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-charcoal);
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid var(--color-terracotta);
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background-color: var(--color-terracotta);
+  color: var(--color-cream);
+}
+
+/* Boarding pass notch */
+.notch-left::before,
+.notch-right::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 40px;
+  background: var(--color-cream);
+  border-radius: 0;
+}
+
+.notch-left::before {
+  left: -10px;
+  border-radius: 0 20px 20px 0;
+}
+
+.notch-right::after {
+  right: -10px;
+  border-radius: 20px 0 0 20px;
 }

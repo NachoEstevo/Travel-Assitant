@@ -12,7 +12,12 @@
 
 # testing
 /coverage
-
+AGENTS.md
+tasks.md
+claude_code_prompt.md
+PLAN.md
+cookies.txt
+nul
 # next.js
 /.next/
 /out/
@@ -39,3 +44,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma

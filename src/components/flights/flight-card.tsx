@@ -1,0 +1,222 @@
+"use client";
+
+import { NormalizedFlight, formatDuration } from "@/lib/amadeus";
+import { Badge } from "@/components/ui/badge";
+import { Plane, Clock, Circle } from "lucide-react";
+
+interface FlightCardProps {
+  flight: NormalizedFlight;
+  carriers?: Record<string, string>;
+  index?: number;
+}
+
+export function FlightCard({ flight, carriers, index = 0 }: FlightCardProps) {
+  const outboundLeg = flight.legs[0];
+  const returnLeg = flight.legs[1];
+
+  const formatTime = (isoString: string) => {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  };
+
+  const formatDate = (isoString: string) => {
+    const date = new Date(isoString);
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const getAirlineName = (code: string) => {
+    return carriers?.[code] || code;
+  };
+
+  const staggerClass = `stagger-${Math.min(index + 1, 10)}`;
+
+  return (
+    <div
+      className={`animate-slide-up ${staggerClass} card-hover group relative overflow-hidden rounded-xl bg-card shadow-sm border border-border`}
+    >
+      {/* Boarding pass notches */}
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-10 bg-background rounded-r-full -ml-2.5 z-10" />
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-10 bg-background rounded-l-full -mr-2.5 z-10" />
+
+      <div className="flex">
+        {/* Main flight info section */}
+        <div className="flex-1 p-5">
+          {/* Airlines */}
+          <div className="flex items-center gap-2 mb-4">
+            {flight.airlines.map((airline) => (
+              <Badge
+                key={airline}
+                variant="secondary"
+                className="font-medium text-xs bg-muted/50"
+              >
+                {getAirlineName(airline)}
+              </Badge>
+            ))}
+            {flight.isOneWay && (
+              <Badge variant="outline" className="text-xs">
+                One Way
+              </Badge>
+            )}
+          </div>
+
+          {/* Outbound flight */}
+          <FlightLeg
+            leg={outboundLeg}
+            formatTime={formatTime}
+            formatDate={formatDate}
+          />
+
+          {/* Return flight if exists */}
+          {returnLeg && (
+            <>
+              <div className="my-4 border-t border-dashed border-border" />
+              <FlightLeg
+                leg={returnLeg}
+                formatTime={formatTime}
+                formatDate={formatDate}
+                isReturn
+              />
+            </>
+          )}
+        </div>
+
+        {/* Perforation divider */}
+        <div className="w-px perforation-vertical my-4" />
+
+        {/* Price section */}
+        <div className="w-36 p-5 flex flex-col items-center justify-center bg-gradient-to-br from-transparent to-muted/30">
+          <span className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+            Total
+          </span>
+          <div className="font-display text-3xl font-semibold text-primary animate-price-glow rounded-lg px-2">
+            ${Math.round(flight.price)}
+          </div>
+          <span className="text-xs text-muted-foreground mt-1">
+            {flight.currency}
+          </span>
+
+          {flight.bookableSeats <= 4 && (
+            <Badge
+              variant="destructive"
+              className="mt-3 text-xs animate-pulse"
+            >
+              {flight.bookableSeats} left
+            </Badge>
+          )}
+
+          <button className="mt-4 w-full py-2 px-3 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+            Select
+          </button>
+        </div>
+      </div>
+
+      {/* Bottom bar with meta info */}
+      <div className="px-5 py-2.5 bg-muted/30 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
+        <span>
+          Book by {new Date(flight.lastTicketingDate).toLocaleDateString()}
+        </span>
+        <span className="font-mono">{flight.id}</span>
+      </div>
+    </div>
+  );
+}
+
+interface FlightLegProps {
+  leg: NormalizedFlight["legs"][0];
+  formatTime: (iso: string) => string;
+  formatDate: (iso: string) => string;
+  isReturn?: boolean;
+}
+
+function FlightLeg({ leg, formatTime, formatDate, isReturn }: FlightLegProps) {
+  return (
+    <div>
+      {isReturn && (
+        <span className="text-xs uppercase tracking-wider text-muted-foreground mb-2 block">
+          Return
+        </span>
+      )}
+      <div className="flex items-center gap-4">
+        {/* Departure */}
+        <div className="text-center min-w-[70px]">
+          <div className="font-display text-2xl font-semibold">
+            {formatTime(leg.departureAt)}
+          </div>
+          <div className="text-lg font-bold tracking-wide">{leg.origin}</div>
+          <div className="text-xs text-muted-foreground">
+            {formatDate(leg.departureAt)}
+          </div>
+        </div>
+
+        {/* Flight path visualization */}
+        <div className="flex-1 flex flex-col items-center gap-1 px-2">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="w-3 h-3" />
+            {formatDuration(leg.duration)}
+          </div>
+          <div className="w-full flex items-center gap-1">
+            <Circle className="w-2 h-2 fill-current text-primary" />
+            <div className="flex-1 h-px bg-border relative">
+              {/* Stops indicator */}
+              {leg.stops > 0 && (
+                <div className="absolute inset-0 flex items-center justify-around">
+                  {Array.from({ length: leg.stops }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-2 h-2 rounded-full bg-muted-foreground/50 border-2 border-card"
+                    />
+                  ))}
+                </div>
+              )}
+              {/* Animated plane */}
+              <Plane className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 text-primary animate-plane" />
+            </div>
+            <Circle className="w-2 h-2 fill-current text-primary" />
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {leg.stops === 0 ? (
+              <span className="text-accent font-medium">Direct</span>
+            ) : (
+              <span>
+                {leg.stops} stop{leg.stops > 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Arrival */}
+        <div className="text-center min-w-[70px]">
+          <div className="font-display text-2xl font-semibold">
+            {formatTime(leg.arrivalAt)}
+          </div>
+          <div className="text-lg font-bold tracking-wide">{leg.destination}</div>
+          <div className="text-xs text-muted-foreground">
+            {formatDate(leg.arrivalAt)}
+          </div>
+        </div>
+      </div>
+
+      {/* Segments preview */}
+      {leg.segments.length > 1 && (
+        <div className="mt-3 flex flex-wrap gap-1">
+          {leg.segments.map((seg, i) => (
+            <span
+              key={i}
+              className="text-xs text-muted-foreground bg-muted/50 px-2 py-0.5 rounded"
+            >
+              {seg.flightNumber} · {seg.origin}→{seg.destination}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
