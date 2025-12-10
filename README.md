@@ -39,7 +39,15 @@ Filter results by:
 
 ## Screenshots
 
-*Coming soon*
+### Home
+<img width="1586" height="1050" alt="image" src="https://github.com/user-attachments/assets/9dd41b44-bbad-4a3c-b5cf-63a958268607" />
+
+### Searching
+<img width="1022" height="687" alt="image" src="https://github.com/user-attachments/assets/ab8e3efa-3484-4dee-b30d-bc9eae3f2716" />
+
+### Flights
+<img width="1091" height="1133" alt="image" src="https://github.com/user-attachments/assets/9ff7a3bb-7e24-4ee7-89ae-207aa4691d6d" />
+
 
 ## Tech Stack
 
