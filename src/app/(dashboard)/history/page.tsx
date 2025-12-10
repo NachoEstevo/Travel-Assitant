@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 
 import { HistoryItem } from "@/app/api/history/route";
+import { toast } from "sonner";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -325,8 +326,11 @@ export default function HistoryPage() {
 
       setSearches((prev) => prev.filter((s) => s.id !== id));
       setTotal((prev) => prev - 1);
+      toast.success("Search deleted");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete");
+      const errorMsg = err instanceof Error ? err.message : "Failed to delete";
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
@@ -342,10 +346,13 @@ export default function HistoryPage() {
         throw new Error(data.error || "Failed to clear history");
       }
 
+      toast.success(`Cleared ${data.count} searches`);
       // Refresh to get any remaining searches (those with tasks)
-      await fetchHistory();
+      await fetchHistory(currentPage);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to clear history");
+      const errorMsg = err instanceof Error ? err.message : "Failed to clear history";
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 

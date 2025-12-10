@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,6 +29,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background`}
       >
         {children}
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            className: "bg-card border-border text-foreground",
+            duration: 4000,
+          }}
+          theme="dark"
+        />
       </body>
     </html>
   );

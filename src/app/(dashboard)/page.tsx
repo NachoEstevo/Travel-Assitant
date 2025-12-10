@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   FlightSearchForm,
   FlightResultsList,
@@ -13,8 +13,19 @@ import { ParsedTravelQuery } from "@/lib/openai";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Compass, Route, Bell, Plane, Sparkles, Info } from "lucide-react";
+import { Compass, Route, Bell, Plane, Sparkles, Info, Clock, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
+
+const CACHE_KEY = "flightSearchCache";
+const CACHE_MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+
+interface CachedSearch {
+  result: SearchResult;
+  timestamp: number;
+  query?: string; // Natural language query if used
+}
 
 interface SearchParams {
   origin: string;
@@ -40,26 +51,70 @@ export default function HomePage() {
   const [routeComparison, setRouteComparison] = useState<MultiCitySearchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [clarificationQuestions, setClarificationQuestions] = useState<string[]>([]);
+  const [cachedAt, setCachedAt] = useState<number | null>(null);
+  const [lastQuery, setLastQuery] = useState<string | null>(null);
 
-  // Load re-run search results from history page
+  // Save results to sessionStorage
+  const cacheResults = useCallback((result: SearchResult, query?: string) => {
+    const cache: CachedSearch = {
+      result,
+      timestamp: Date.now(),
+      query,
+    };
+    try {
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+      setCachedAt(cache.timestamp);
+      setLastQuery(query || null);
+    } catch (e) {
+      console.error("Failed to cache search results:", e);
+    }
+  }, []);
+
+  // Load cached results or re-run search results from history page
   useEffect(() => {
+    // First check for re-run data from history page
     const rerunData = sessionStorage.getItem("rerunSearch");
     if (rerunData) {
       try {
         const data = JSON.parse(rerunData);
-        setSearchResult({
+        const result = {
           searchId: data.searchId,
           flights: data.flights,
           carriers: data.carriers,
           parsedQuery: data.parsedQuery,
           insight: data.insight,
-        });
+        };
+        setSearchResult(result);
+        cacheResults(result, data.query);
       } catch (e) {
         console.error("Failed to parse rerun search data:", e);
       }
       sessionStorage.removeItem("rerunSearch");
+      return;
     }
-  }, []);
+
+    // Then check for cached results
+    const cachedData = sessionStorage.getItem(CACHE_KEY);
+    if (cachedData) {
+      try {
+        const cache: CachedSearch = JSON.parse(cachedData);
+        const age = Date.now() - cache.timestamp;
+
+        // Only restore if cache is fresh (< 30 minutes)
+        if (age < CACHE_MAX_AGE_MS) {
+          setSearchResult(cache.result);
+          setCachedAt(cache.timestamp);
+          setLastQuery(cache.query || null);
+        } else {
+          // Clear stale cache
+          sessionStorage.removeItem(CACHE_KEY);
+        }
+      } catch (e) {
+        console.error("Failed to parse cached search data:", e);
+        sessionStorage.removeItem(CACHE_KEY);
+      }
+    }
+  }, [cacheResults]);
 
   // Manual structured search
   const handleSearch = async (params: SearchParams) => {
@@ -87,14 +142,19 @@ export default function HomePage() {
         throw new Error(data.error || "Search failed");
       }
 
-      setSearchResult({
+      const result = {
         searchId: data.data.searchId,
         flights: data.data.flights,
         carriers: data.data.dictionaries?.carriers,
-      });
+      };
+      setSearchResult(result);
+      cacheResults(result);
+      toast.success(`Found ${result.flights.length} flights`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMsg = err instanceof Error ? err.message : "An error occurred";
+      setError(errorMsg);
       setSearchResult(null);
+      toast.error("Search failed", { description: errorMsg });
     } finally {
       setIsLoading(false);
     }
@@ -125,19 +185,39 @@ export default function HomePage() {
         throw new Error(data.error || "Search failed");
       }
 
-      setSearchResult({
+      const result = {
         searchId: data.data.searchId,
         flights: data.data.flights,
         carriers: data.data.dictionaries?.carriers,
         parsedQuery: data.data.parsedQuery,
         insight: data.data.insight,
-      });
+      };
+      setSearchResult(result);
+      cacheResults(result, query);
+      toast.success(`Found ${result.flights.length} flights`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const errorMsg = err instanceof Error ? err.message : "An error occurred";
+      setError(errorMsg);
       setSearchResult(null);
+      toast.error("Search failed", { description: errorMsg });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Refresh prices (re-run last query)
+  const handleRefreshPrices = async () => {
+    if (lastQuery) {
+      await handleNaturalSearch(lastQuery);
+    }
+  };
+
+  // Clear cached results
+  const clearResults = () => {
+    setSearchResult(null);
+    setCachedAt(null);
+    setLastQuery(null);
+    sessionStorage.removeItem(CACHE_KEY);
   };
 
   // Compare routes (multi-city search)
@@ -232,6 +312,16 @@ export default function HomePage() {
       {/* Results */}
       {(isLoading || searchResult) && (
         <div className="pt-4">
+          {/* Cached results indicator */}
+          {searchResult && cachedAt && !isLoading && (
+            <CachedResultsBanner
+              cachedAt={cachedAt}
+              onRefresh={handleRefreshPrices}
+              onClear={clearResults}
+              canRefresh={!!lastQuery}
+              isRefreshing={isLoading}
+            />
+          )}
           <FlightResultsList
             flights={searchResult?.flights || []}
             carriers={searchResult?.carriers}
@@ -356,5 +446,68 @@ function FeatureCard({
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const now = Date.now();
+  const diffMs = now - timestamp;
+  const diffMins = Math.floor(diffMs / 60000);
+
+  if (diffMins < 1) return "just now";
+  if (diffMins === 1) return "1 minute ago";
+  if (diffMins < 60) return `${diffMins} minutes ago`;
+
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours === 1) return "1 hour ago";
+  return `${diffHours} hours ago`;
+}
+
+function CachedResultsBanner({
+  cachedAt,
+  onRefresh,
+  onClear,
+  canRefresh,
+  isRefreshing,
+}: {
+  cachedAt: number;
+  onRefresh: () => void;
+  onClear: () => void;
+  canRefresh: boolean;
+  isRefreshing: boolean;
+}) {
+  const [timeAgo, setTimeAgo] = useState(formatRelativeTime(cachedAt));
+
+  // Update time ago every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeAgo(formatRelativeTime(cachedAt));
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [cachedAt]);
+
+  return (
+    <div className="flex items-center justify-between py-3 px-4 mb-4 rounded-lg bg-muted/50 border border-border">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Clock className="h-4 w-4" />
+        <span>Results from {timeAgo}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        {canRefresh && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-1.5 ${isRefreshing ? "animate-spin" : ""}`} />
+            Refresh Prices
+          </Button>
+        )}
+        <Button variant="ghost" size="sm" onClick={onClear}>
+          Clear
+        </Button>
+      </div>
+    </div>
   );
 }
