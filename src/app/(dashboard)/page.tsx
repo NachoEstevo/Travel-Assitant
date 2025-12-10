@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FlightSearchForm,
   FlightResultsList,
@@ -40,6 +40,26 @@ export default function HomePage() {
   const [routeComparison, setRouteComparison] = useState<MultiCitySearchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [clarificationQuestions, setClarificationQuestions] = useState<string[]>([]);
+
+  // Load re-run search results from history page
+  useEffect(() => {
+    const rerunData = sessionStorage.getItem("rerunSearch");
+    if (rerunData) {
+      try {
+        const data = JSON.parse(rerunData);
+        setSearchResult({
+          searchId: data.searchId,
+          flights: data.flights,
+          carriers: data.carriers,
+          parsedQuery: data.parsedQuery,
+          insight: data.insight,
+        });
+      } catch (e) {
+        console.error("Failed to parse rerun search data:", e);
+      }
+      sessionStorage.removeItem("rerunSearch");
+    }
+  }, []);
 
   // Manual structured search
   const handleSearch = async (params: SearchParams) => {

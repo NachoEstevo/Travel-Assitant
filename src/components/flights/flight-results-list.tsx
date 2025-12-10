@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { NormalizedFlight } from "@/lib/amadeus";
 import { FlightCard } from "./flight-card";
 import { FlightCardSkeleton } from "./flight-card-skeleton";
@@ -12,7 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowUpDown, Filter, Plane } from "lucide-react";
+import { ArrowUpDown, Filter, Plane, ChevronLeft, ChevronRight } from "lucide-react";
+
+const ITEMS_PER_PAGE = 10;
 
 interface FlightResultsListProps {
   flights: NormalizedFlight[];
@@ -31,30 +33,51 @@ export function FlightResultsList({
 }: FlightResultsListProps) {
   const [sortBy, setSortBy] = useState<SortOption>("price");
   const [showDirectOnly, setShowDirectOnly] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Sort and filter flights
-  const processedFlights = [...flights]
-    .filter((f) => !showDirectOnly || f.legs[0].stops === 0)
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "price":
-          return a.price - b.price;
-        case "duration":
-          return (
-            parseDuration(a.legs[0].duration) -
-            parseDuration(b.legs[0].duration)
-          );
-        case "stops":
-          return a.legs[0].stops - b.legs[0].stops;
-        case "departure":
-          return (
-            new Date(a.legs[0].departureAt).getTime() -
-            new Date(b.legs[0].departureAt).getTime()
-          );
-        default:
-          return 0;
-      }
-    });
+  const processedFlights = useMemo(() => {
+    return [...flights]
+      .filter((f) => !showDirectOnly || f.legs[0].stops === 0)
+      .sort((a, b) => {
+        switch (sortBy) {
+          case "price":
+            return a.price - b.price;
+          case "duration":
+            return (
+              parseDuration(a.legs[0].duration) -
+              parseDuration(b.legs[0].duration)
+            );
+          case "stops":
+            return a.legs[0].stops - b.legs[0].stops;
+          case "departure":
+            return (
+              new Date(a.legs[0].departureAt).getTime() -
+              new Date(b.legs[0].departureAt).getTime()
+            );
+          default:
+            return 0;
+        }
+      });
+  }, [flights, showDirectOnly, sortBy]);
+
+  // Pagination
+  const totalPages = Math.ceil(processedFlights.length / ITEMS_PER_PAGE);
+  const paginatedFlights = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return processedFlights.slice(start, start + ITEMS_PER_PAGE);
+  }, [processedFlights, currentPage]);
+
+  // Reset to page 1 when filters change
+  const handleFilterChange = (directOnly: boolean) => {
+    setShowDirectOnly(directOnly);
+    setCurrentPage(1);
+  };
+
+  const handleSortChange = (sort: SortOption) => {
+    setSortBy(sort);
+    setCurrentPage(1);
+  };
 
   if (isLoading) {
     return (
@@ -62,9 +85,9 @@ export function FlightResultsList({
         <ResultsHeader
           count={0}
           sortBy={sortBy}
-          setSortBy={setSortBy}
+          setSortBy={handleSortChange}
           showDirectOnly={showDirectOnly}
-          setShowDirectOnly={setShowDirectOnly}
+          setShowDirectOnly={handleFilterChange}
           isLoading
         />
         {Array.from({ length: 5 }).map((_, i) => (
@@ -100,9 +123,9 @@ export function FlightResultsList({
         totalCount={flights.length}
         directCount={directCount}
         sortBy={sortBy}
-        setSortBy={setSortBy}
+        setSortBy={handleSortChange}
         showDirectOnly={showDirectOnly}
-        setShowDirectOnly={setShowDirectOnly}
+        setShowDirectOnly={handleFilterChange}
         searchId={searchId}
       />
 
@@ -149,7 +172,7 @@ export function FlightResultsList({
 
       {/* Flight cards */}
       <div className="space-y-4">
-        {processedFlights.map((flight, index) => (
+        {paginatedFlights.map((flight, index) => (
           <FlightCard
             key={flight.id}
             flight={flight}
@@ -159,13 +182,15 @@ export function FlightResultsList({
         ))}
       </div>
 
-      {/* Load more placeholder */}
-      {processedFlights.length >= 50 && (
-        <div className="text-center pt-4">
-          <Button variant="outline" className="font-medium">
-            Load more results
-          </Button>
-        </div>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={processedFlights.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
+        />
       )}
     </div>
   );
@@ -255,4 +280,99 @@ function parseDuration(iso: string): number {
   const hours = match[1] ? parseInt(match[1]) : 0;
   const minutes = match[2] ? parseInt(match[2]) : 0;
   return hours * 60 + minutes;
+}
+
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  itemsPerPage: number;
+  onPageChange: (page: number) => void;
+}
+
+function Pagination({
+  currentPage,
+  totalPages,
+  totalItems,
+  itemsPerPage,
+  onPageChange,
+}: PaginationProps) {
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+  // Generate page numbers to show
+  const getPageNumbers = () => {
+    const pages: (number | "...")[] = [];
+
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    pages.push(1);
+
+    if (currentPage > 3) {
+      pages.push("...");
+    }
+
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    if (currentPage < totalPages - 2) {
+      pages.push("...");
+    }
+
+    pages.push(totalPages);
+
+    return pages;
+  };
+
+  return (
+    <div className="flex items-center justify-between py-4 border-t border-border">
+      <p className="text-sm text-muted-foreground">
+        Showing {startItem}-{endItem} of {totalItems} flights
+      </p>
+
+      <div className="flex items-center gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        {getPageNumbers().map((page, i) =>
+          page === "..." ? (
+            <span key={`ellipsis-${i}`} className="px-2 text-muted-foreground">
+              ...
+            </span>
+          ) : (
+            <Button
+              key={page}
+              variant={currentPage === page ? "default" : "outline"}
+              size="sm"
+              onClick={() => onPageChange(page)}
+              className="w-9"
+            >
+              {page}
+            </Button>
+          )
+        )}
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
 }

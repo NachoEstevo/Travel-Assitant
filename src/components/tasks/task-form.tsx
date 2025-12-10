@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -40,14 +40,23 @@ const taskFormSchema = z.object({
 
 type TaskFormData = z.infer<typeof taskFormSchema>;
 
+interface PrefillData {
+  name?: string;
+  origin?: string;
+  destination?: string;
+  departureDate?: string;
+  returnDate?: string;
+}
+
 interface TaskFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: Omit<TaskFormData, "priceTarget"> & { priceTarget?: number }) => Promise<void>;
   editTask?: TaskData | null;
+  prefillData?: PrefillData | null;
 }
 
-export function TaskForm({ open, onOpenChange, onSubmit, editTask }: TaskFormProps) {
+export function TaskForm({ open, onOpenChange, onSubmit, editTask, prefillData }: TaskFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get tomorrow's date as min date
@@ -55,32 +64,57 @@ export function TaskForm({ open, onOpenChange, onSubmit, editTask }: TaskFormPro
   tomorrow.setDate(tomorrow.getDate() + 1);
   const minDate = tomorrow.toISOString().split("T")[0];
 
+  // Determine default values from editTask or prefillData
+  const getDefaultValues = (): TaskFormData => {
+    if (editTask) {
+      return {
+        name: editTask.name,
+        origin: editTask.origin,
+        destination: editTask.destination,
+        departureDate: editTask.departureDate,
+        returnDate: editTask.returnDate || "",
+        adults: editTask.adults,
+        travelClass: editTask.travelClass as TaskFormData["travelClass"],
+        cronExpr: editTask.cronExpr,
+        priceTarget: editTask.priceTarget || "",
+      };
+    }
+    if (prefillData) {
+      return {
+        name: prefillData.name || "",
+        origin: prefillData.origin || "",
+        destination: prefillData.destination || "",
+        departureDate: prefillData.departureDate || "",
+        returnDate: prefillData.returnDate || "",
+        adults: 1,
+        travelClass: "ECONOMY",
+        cronExpr: "0 9 * * *",
+        priceTarget: "",
+      };
+    }
+    return {
+      name: "",
+      origin: "",
+      destination: "",
+      departureDate: "",
+      returnDate: "",
+      adults: 1,
+      travelClass: "ECONOMY",
+      cronExpr: "0 9 * * *",
+      priceTarget: "",
+    };
+  };
+
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskFormSchema),
-    defaultValues: editTask
-      ? {
-          name: editTask.name,
-          origin: editTask.origin,
-          destination: editTask.destination,
-          departureDate: editTask.departureDate,
-          returnDate: editTask.returnDate || "",
-          adults: editTask.adults,
-          travelClass: editTask.travelClass as TaskFormData["travelClass"],
-          cronExpr: editTask.cronExpr,
-          priceTarget: editTask.priceTarget || "",
-        }
-      : {
-          name: "",
-          origin: "",
-          destination: "",
-          departureDate: "",
-          returnDate: "",
-          adults: 1,
-          travelClass: "ECONOMY",
-          cronExpr: "0 9 * * *",
-          priceTarget: "",
-        },
+    defaultValues: getDefaultValues(),
   });
+
+  // Reset form when editTask or prefillData changes
+  useEffect(() => {
+    form.reset(getDefaultValues());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editTask, prefillData]);
 
   const handleSubmit = async (data: TaskFormData) => {
     setIsSubmitting(true);

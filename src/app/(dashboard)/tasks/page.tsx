@@ -1,20 +1,50 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TaskCard, TaskCardSkeleton, TaskForm, TaskData, TaskDetailDialog } from "@/components/tasks";
 import { Plus, Bell, Clock, RefreshCw, Loader2 } from "lucide-react";
 
 export default function TasksPage() {
+  const searchParams = useSearchParams();
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskData | null>(null);
+  const [prefillTask, setPrefillTask] = useState<Partial<TaskData> | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  // Handle create from history page
+  useEffect(() => {
+    if (searchParams.get("create") === "true") {
+      const prefillData = sessionStorage.getItem("createTaskFrom");
+      if (prefillData) {
+        try {
+          const data = JSON.parse(prefillData);
+          setPrefillTask({
+            name: data.name || "",
+            origin: data.origin || "",
+            destination: data.destination || "",
+            departureDate: data.departureDate || "",
+            returnDate: data.returnDate || undefined,
+          } as Partial<TaskData>);
+          setIsFormOpen(true);
+        } catch (e) {
+          console.error("Failed to parse prefill data:", e);
+        }
+        sessionStorage.removeItem("createTaskFrom");
+      } else {
+        setIsFormOpen(true);
+      }
+      // Clear the query param from URL
+      window.history.replaceState({}, "", "/tasks");
+    }
+  }, [searchParams]);
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -166,6 +196,7 @@ export default function TasksPage() {
   const closeForm = () => {
     setIsFormOpen(false);
     setEditingTask(null);
+    setPrefillTask(null);
   };
 
   const openDetailDialog = (task: TaskData) => {
@@ -322,6 +353,7 @@ export default function TasksPage() {
         onOpenChange={closeForm}
         onSubmit={editingTask ? handleEditTask : handleCreateTask}
         editTask={editingTask}
+        prefillData={prefillTask}
       />
 
       {/* Task Detail Dialog */}

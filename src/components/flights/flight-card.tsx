@@ -2,7 +2,33 @@
 
 import { NormalizedFlight, formatDuration } from "@/lib/amadeus";
 import { Badge } from "@/components/ui/badge";
-import { Plane, Clock, Circle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Plane, Clock, Circle, ExternalLink } from "lucide-react";
+
+/**
+ * Generates a Google Flights search URL for the given flight.
+ * Format: https://www.google.com/travel/flights?q=flights%20from%20EZE%20to%20NRT%20on%202025-02-20
+ *
+ * More structured format:
+ * https://www.google.com/travel/flights/search?tfs=...
+ * But the simple q= format works well for opening Google Flights with pre-filled search
+ */
+function generateGoogleFlightsUrl(flight: NormalizedFlight): string {
+  const outbound = flight.legs[0];
+  const returnLeg = flight.legs[1];
+
+  // Format dates as YYYY-MM-DD
+  const departureDate = new Date(outbound.departureAt).toISOString().split("T")[0];
+
+  let query = `flights from ${outbound.origin} to ${outbound.destination} on ${departureDate}`;
+
+  if (returnLeg) {
+    const returnDate = new Date(returnLeg.departureAt).toISOString().split("T")[0];
+    query += ` return ${returnDate}`;
+  }
+
+  return `https://www.google.com/travel/flights?q=${encodeURIComponent(query)}`;
+}
 
 interface FlightCardProps {
   flight: NormalizedFlight;
@@ -112,9 +138,20 @@ export function FlightCard({ flight, carriers, index = 0 }: FlightCardProps) {
             </Badge>
           )}
 
-          <button className="mt-4 w-full py-2 px-3 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
-            Select
-          </button>
+          <Button
+            asChild
+            className="mt-4 w-full"
+            size="sm"
+          >
+            <a
+              href={generateGoogleFlightsUrl(flight)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Book Now
+              <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+            </a>
+          </Button>
         </div>
       </div>
 
