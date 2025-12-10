@@ -33,13 +33,22 @@ export function SearchProgress({ stage, isNaturalLanguage = true }: SearchProgre
     : stages.filter((s) => s.id !== "parsing");
 
   return (
-    <div className="py-8">
+    <div className="py-10">
       <div className="max-w-md mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-6"
+        >
+          <h3 className="font-display text-xl text-foreground/80">Finding your perfect flight</h3>
+        </motion.div>
+
         {/* Progress bar */}
         <div className="relative mb-8">
-          <div className="h-1 bg-muted rounded-full overflow-hidden">
+          <div className="h-1.5 bg-muted rounded-full overflow-hidden shadow-inner">
             <motion.div
-              className="h-full bg-primary"
+              className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full"
               initial={{ width: "0%" }}
               animate={{
                 width: stage === "complete" ? "100%" : `${((currentIndex + 0.5) / (filteredStages.length - 1)) * 100}%`,
@@ -50,7 +59,7 @@ export function SearchProgress({ stage, isNaturalLanguage = true }: SearchProgre
         </div>
 
         {/* Stages */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {filteredStages.map((s, index) => {
             const actualIndex = isNaturalLanguage ? index : index + 1;
             const isActive = stageIndex[stage] === actualIndex;
@@ -64,23 +73,30 @@ export function SearchProgress({ stage, isNaturalLanguage = true }: SearchProgre
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
                 className={cn(
-                  "flex items-center gap-3 p-3 rounded-lg transition-all",
-                  isActive && "bg-primary/10 border border-primary/20",
-                  isComplete && "text-muted-foreground"
+                  "flex items-center gap-4 p-4 rounded-xl transition-all duration-300",
+                  isActive && "bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 shadow-sm",
+                  isComplete && "text-muted-foreground",
+                  !isActive && !isComplete && "opacity-50"
                 )}
               >
                 <div
                   className={cn(
-                    "flex items-center justify-center w-10 h-10 rounded-full transition-all",
-                    isActive && "bg-primary text-primary-foreground",
-                    isComplete && "bg-green-500/20 text-green-500",
-                    !isActive && !isComplete && "bg-muted text-muted-foreground"
+                    "flex items-center justify-center w-11 h-11 rounded-xl transition-all shadow-sm",
+                    isActive && "bg-primary text-primary-foreground shadow-md",
+                    isComplete && "bg-green-500/15 text-green-600",
+                    !isActive && !isComplete && "bg-muted/80 text-muted-foreground"
                   )}
                 >
                   {isActive ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : isComplete ? (
-                    <CheckCircle2 className="w-5 h-5" />
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
+                      <CheckCircle2 className="w-5 h-5" />
+                    </motion.div>
                   ) : (
                     <Icon className="w-5 h-5" />
                   )}
@@ -88,9 +104,9 @@ export function SearchProgress({ stage, isNaturalLanguage = true }: SearchProgre
                 <div className="flex-1">
                   <p
                     className={cn(
-                      "font-medium",
+                      "font-medium text-sm",
                       isActive && "text-primary",
-                      isComplete && "text-green-500"
+                      isComplete && "text-green-600"
                     )}
                   >
                     {s.label}
@@ -98,19 +114,19 @@ export function SearchProgress({ stage, isNaturalLanguage = true }: SearchProgre
                 </div>
                 {isActive && (
                   <motion.div
-                    className="flex gap-1"
+                    className="flex gap-1.5"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                   >
                     {[0, 1, 2].map((i) => (
                       <motion.div
                         key={i}
-                        className="w-1.5 h-1.5 rounded-full bg-primary"
-                        animate={{ scale: [1, 1.2, 1] }}
+                        className="w-2 h-2 rounded-full bg-primary/70"
+                        animate={{ scale: [1, 1.3, 1], opacity: [0.5, 1, 0.5] }}
                         transition={{
-                          duration: 0.6,
+                          duration: 0.8,
                           repeat: Infinity,
-                          delay: i * 0.2,
+                          delay: i * 0.15,
                         }}
                       />
                     ))}

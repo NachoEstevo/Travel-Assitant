@@ -99,20 +99,20 @@ export function FlightSearchForm({
   const minDate = tomorrow.toISOString().split("T")[0];
 
   return (
-    <Card className="overflow-hidden border-border/50 shadow-lg">
+    <Card className="overflow-hidden border-border/60 shadow-lg gradient-card">
       <Tabs defaultValue="natural" className="w-full">
-        <div className="bg-muted/30 border-b border-border px-6 pt-4">
-          <TabsList className="grid w-full max-w-md grid-cols-2 bg-muted/50">
+        <div className="bg-gradient-to-r from-muted/40 to-muted/20 border-b border-border/50 px-6 pt-4">
+          <TabsList className="grid w-full max-w-md grid-cols-2 bg-muted/60 p-1">
             <TabsTrigger
               value="natural"
-              className="data-[state=active]:bg-card data-[state=active]:shadow-sm"
+              className="data-[state=active]:bg-card data-[state=active]:shadow-md transition-all duration-200"
             >
               <Sparkles className="w-4 h-4 mr-2" />
               Natural Language
             </TabsTrigger>
             <TabsTrigger
               value="structured"
-              className="data-[state=active]:bg-card data-[state=active]:shadow-sm"
+              className="data-[state=active]:bg-card data-[state=active]:shadow-md transition-all duration-200"
             >
               <Search className="w-4 h-4 mr-2" />
               Manual Search
@@ -123,9 +123,10 @@ export function FlightSearchForm({
         {/* Natural Language Search */}
         <TabsContent value="natural" className="m-0">
           <CardContent className="p-6">
-            <form onSubmit={handleNaturalSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="natural-query" className="text-base font-medium">
+            <form onSubmit={handleNaturalSubmit} className="space-y-5">
+              <div className="space-y-3">
+                <Label htmlFor="natural-query" className="text-base font-medium flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold">AI</span>
                   Describe your trip
                 </Label>
                 <Textarea
@@ -133,10 +134,11 @@ export function FlightSearchForm({
                   value={naturalQuery}
                   onChange={(e) => setNaturalQuery(e.target.value)}
                   placeholder="I want to go to Japan in February for about 3 weeks, budget under $1500 from Buenos Aires. I'm flexible with exact dates."
-                  className="min-h-[120px] resize-none text-base leading-relaxed"
+                  className="min-h-[120px] resize-none text-base leading-relaxed border-border/60 focus:border-primary/50 transition-colors"
                   disabled={isLoading}
                 />
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                  <span className="inline-block w-1 h-1 rounded-full bg-muted-foreground/50" />
                   Include your origin, destination, dates, budget, and any flexibility
                 </p>
               </div>
@@ -146,7 +148,7 @@ export function FlightSearchForm({
                   type="submit"
                   size="lg"
                   disabled={!naturalQuery.trim() || isLoading || !onNaturalSearch}
-                  className="font-medium"
+                  className="font-medium btn-press shadow-md hover:shadow-lg transition-shadow px-6"
                 >
                   {isLoading ? (
                     <>

@@ -155,11 +155,11 @@ export function FlightCard({ flight, carriers, index = 0 }: FlightCardProps) {
 
   return (
     <div
-      className={`animate-slide-up ${staggerClass} card-hover group relative overflow-hidden rounded-xl bg-card shadow-sm border border-border`}
+      className={`animate-slide-up ${staggerClass} card-hover group relative overflow-hidden rounded-xl gradient-card shadow-sm border border-border/80 hover:shadow-lg transition-shadow duration-300`}
     >
       {/* Boarding pass notches */}
-      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-10 bg-background rounded-r-full -ml-2.5 z-10" />
-      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-10 bg-background rounded-l-full -mr-2.5 z-10" />
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-5 h-10 bg-background rounded-r-full -ml-2.5 z-10 shadow-inner" />
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-5 h-10 bg-background rounded-l-full -mr-2.5 z-10 shadow-inner" />
 
       <div className="flex">
         {/* Main flight info section */}
@@ -170,13 +170,13 @@ export function FlightCard({ flight, carriers, index = 0 }: FlightCardProps) {
               <Badge
                 key={airline}
                 variant="secondary"
-                className="font-medium text-xs bg-muted/50"
+                className="font-medium text-xs bg-muted/60 hover:bg-muted transition-colors"
               >
                 {getAirlineName(airline)}
               </Badge>
             ))}
             {flight.isOneWay && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs border-dashed">
                 One Way
               </Badge>
             )}
@@ -207,14 +207,17 @@ export function FlightCard({ flight, carriers, index = 0 }: FlightCardProps) {
         <div className="w-px perforation-vertical my-4" />
 
         {/* Price section */}
-        <div className="w-36 p-5 flex flex-col items-center justify-center bg-gradient-to-br from-transparent to-muted/30">
-          <span className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
-            Total
+        <div className="w-40 p-5 flex flex-col items-center justify-center bg-gradient-to-br from-muted/10 to-muted/40 relative">
+          {/* Subtle corner accent */}
+          <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-primary/5 to-transparent rounded-bl-full" />
+
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5 font-medium">
+            Total Price
           </span>
-          <div className="font-display text-3xl font-semibold text-primary animate-price-glow rounded-lg px-2">
-            ${Math.round(flight.price)}
+          <div className="font-display text-3xl font-semibold text-primary animate-price-glow rounded-lg px-2 tabular-nums">
+            ${Math.round(flight.price).toLocaleString()}
           </div>
-          <span className="text-xs text-muted-foreground mt-1">
+          <span className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wide">
             {flight.currency}
           </span>
 
@@ -229,7 +232,7 @@ export function FlightCard({ flight, carriers, index = 0 }: FlightCardProps) {
 
           <Button
             asChild
-            className="mt-4 w-full"
+            className="mt-4 w-full btn-press shadow-sm hover:shadow-md transition-shadow"
             size="sm"
           >
             <a
@@ -238,7 +241,7 @@ export function FlightCard({ flight, carriers, index = 0 }: FlightCardProps) {
               rel="noopener noreferrer"
             >
               Book Now
-              <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+              <ExternalLink className="ml-1.5 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </a>
           </Button>
 
@@ -248,13 +251,13 @@ export function FlightCard({ flight, carriers, index = 0 }: FlightCardProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="mt-2 w-full"
+                className="mt-2 w-full btn-press hover:border-primary/50 hover:bg-primary/5 transition-colors"
               >
                 <Bell className="h-3.5 w-3.5 mr-1.5" />
                 Set Alert
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64" align="end">
+            <PopoverContent className="w-64 glass shadow-lg" align="end">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <h4 className="font-medium flex items-center gap-2">
